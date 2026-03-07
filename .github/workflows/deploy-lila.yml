@@ -1,0 +1,47 @@
+name: Deploy Lila's Nature Explorer
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch: # lets you trigger manually from GitHub website
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: LilaExplorer/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: LilaExplorer
+
+      - name: Build web app
+        run: EXPO_NO_TELEMETRY=1 npx expo export --platform web
+        working-directory: LilaExplorer
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: LilaExplorer/dist
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
