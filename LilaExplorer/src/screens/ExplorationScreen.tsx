@@ -44,17 +44,29 @@ interface SpawnedAnimal {
   animal: Animal;
   x: number;
   bounceAnim: Animated.Value;
+  scaleAnim: Animated.Value;   // used for binoculars zoom-in entrance
   found: boolean;
+  isBonus: boolean;            // binoculars extra animal
 }
 
-function spawnAnimals(animals: Animal[], screenW: number): SpawnedAnimal[] {
-  const positions = [0.15, 0.3, 0.5, 0.7, 0.85];
-  return animals.slice(0, 5).map((animal, i) => ({
-    animal,
-    x: positions[i % positions.length] * screenW,
-    bounceAnim: new Animated.Value(0),
-    found: false,
-  }));
+function spawnAnimals(
+  animals: Animal[],
+  screenW: number,
+  hasBinoculars: boolean,
+): SpawnedAnimal[] {
+  const max = hasBinoculars ? 6 : 5;
+  const positions = [0.12, 0.28, 0.48, 0.68, 0.84, 0.95];
+  return animals.slice(0, max).map((animal, i) => {
+    const isBonus = hasBinoculars && i === max - 1;
+    return {
+      animal,
+      x: positions[i % positions.length] * screenW,
+      bounceAnim: new Animated.Value(0),
+      scaleAnim: new Animated.Value(isBonus ? 0 : 1),
+      found: false,
+      isBonus,
+    };
+  });
 }
 
 export function ExplorationScreen({ route, navigation }: Props) {
@@ -65,38 +77,69 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const {
     hairColor, skinTone, outfitColor, equippedHat,
     level, xp, discoveredAnimals, animalFriendship, companionAnimals,
+    ownedPowerups,
     gainXP, discoverAnimal, increaseFriendship, visitLocation,
   } = useGameStore();
 
-  // Lila movement
+  // ── Power-up flags ────────────────────────────────────────────
+  const hasBinoculars   = ownedPowerups.includes('powerup-binoculars');
+  const hasRainBoots    = ownedPowerups.includes('powerup-rain-boots');
+  const hasLantern      = ownedPowerups.includes('powerup-lantern');
+  const hasGoldenJournal = ownedPowerups.includes('powerup-journal-upgrade');
+
+  // ── Lila movement ─────────────────────────────────────────────
   const lilaX = useRef(new Animated.Value(width * 0.15)).current;
   const [lilaFacing, setLilaFacing] = useState<'left' | 'right'>('right');
   const [lilaCurrentX, setLilaCurrentX] = useState(width * 0.15);
 
-  // Animals
+  // ── Animals ───────────────────────────────────────────────────
   const [spawnedAnimals, setSpawnedAnimals] = useState<SpawnedAnimal[]>(() =>
-    spawnAnimals(locationAnimals, width)
+    spawnAnimals(locationAnimals, width, hasBinoculars)
   );
 
-  // Speech bubble
+  // ── Speech bubble ─────────────────────────────────────────────
   const [selectedAnimal, setSelectedAnimal] = useState<SpawnedAnimal | null>(null);
   const bubbleOpacity = useRef(new Animated.Value(0)).current;
 
-  // Puzzle
+  // ── Puzzle ────────────────────────────────────────────────────
   const [activePuzzle, setActivePuzzle] = useState<{
     animal: Animal;
     puzzle: Puzzle;
     bonusXP: number;
   } | null>(null);
 
-  // New companion toast
+  // ── Lantern hint — one per area visit ─────────────────────────
+  const [hintAvailable, setHintAvailable] = useState(hasLantern);
+  const [hintUsed, setHintUsed] = useState(false);
+
+  // ── Rain Boots XP toast ───────────────────────────────────────
+  const [rainToast, setRainToast] = useState<string | null>(null);
+  const rainToastAnim = useRef(new Animated.Value(0)).current;
+
+  // ── New companion toast ───────────────────────────────────────
   const [newCompanionName, setNewCompanionName] = useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
 
-  // Session stats
+  // ── Session stats ─────────────────────────────────────────────
   const [sessionFinds, setSessionFinds] = useState(0);
   const [xpGained, setXpGained] = useState(0);
   const [showSessionEnd, setShowSessionEnd] = useState(false);
+
+  // ── Binoculars: zoom in the bonus animal after mount ──────────
+  useEffect(() => {
+    if (!hasBinoculars) return;
+    const bonus = spawnedAnimals.find((s) => s.isBonus);
+    if (!bonus) return;
+    setTimeout(() => {
+      Animated.spring(bonus.scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 6,
+        bounciness: 14,
+      }).start();
+      audioManager.playSfx('discover');
+    }, 900);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,6 +151,9 @@ export function ExplorationScreen({ route, navigation }: Props) {
           location.sceneType === 'mountain' ? 'mountain' : 'park';
         audioManager.playMusic(track);
       }
+      // Reset hint each time user enters an area
+      setHintAvailable(hasLantern);
+      setHintUsed(false);
     }, [locationId])
   );
 
@@ -119,7 +165,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     );
   }
 
-  // ── Companion toast ────────────────────────────────────────────
+  // ── Companion toast ───────────────────────────────────────────
 
   const showCompanionToast = (animalName: string) => {
     setNewCompanionName(animalName);
@@ -131,7 +177,32 @@ export function ExplorationScreen({ route, navigation }: Props) {
     ]).start(() => setNewCompanionName(null));
   };
 
-  // ── Check if animal becomes companion after friendship increase ──
+  // ── Rain Boots XP toast ───────────────────────────────────────
+
+  const showRainToast = (bonus: number) => {
+    setRainToast(`+${bonus} 🌧️ boots bonus!`);
+    rainToastAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(rainToastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(1400),
+      Animated.timing(rainToastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => setRainToast(null));
+  };
+
+  // ── Gain XP with optional Rain Boots multiplier ───────────────
+
+  const gainXPWithBoots = (base: number) => {
+    if (hasRainBoots) {
+      const bonus = Math.ceil(base * 0.25);
+      gainXP(base + bonus);
+      showRainToast(bonus);
+      return base + bonus;
+    }
+    gainXP(base);
+    return base;
+  };
+
+  // ── Friendship increase ───────────────────────────────────────
 
   const tryIncreaseFriendship = (animal: Animal, extraBoost = false) => {
     const current = animalFriendship[animal.id] ?? 0;
@@ -147,7 +218,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     }
   };
 
-  // ── Scene / character movement ─────────────────────────────────
+  // ── Scene / character movement ────────────────────────────────
 
   const handleScenePress = (evt: any) => {
     if (selectedAnimal || activePuzzle) return;
@@ -164,7 +235,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     }).start();
   };
 
-  // ── Animal tap ─────────────────────────────────────────────────
+  // ── Animal tap ────────────────────────────────────────────────
 
   const handleAnimalPress = (spawned: SpawnedAnimal) => {
     if (selectedAnimal || activePuzzle) return;
@@ -181,18 +252,18 @@ export function ExplorationScreen({ route, navigation }: Props) {
     Animated.timing(bubbleOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
   };
 
-  // ── Say Hi (base XP + friendship, then puzzle) ─────────────────
+  // ── Say Hi ────────────────────────────────────────────────────
 
   const handleSayHi = () => {
     if (!selectedAnimal) return;
     const { animal } = selectedAnimal;
     const isNew = !discoveredAnimals.includes(animal.id);
 
-    gainXP(animal.xpReward);
+    const earned = gainXPWithBoots(animal.xpReward);
     discoverAnimal(animal.id);
     tryIncreaseFriendship(animal);
 
-    setXpGained((prev) => prev + animal.xpReward);
+    setXpGained((prev) => prev + earned);
     const newFinds = sessionFinds + (isNew ? 1 : 0);
     if (isNew) setSessionFinds(newFinds);
 
@@ -204,7 +275,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     );
     closeBubble();
 
-    // Offer a puzzle after a short pause
+    // Offer puzzle
     const puzzleData = getRandomPuzzle(animal.id);
     if (puzzleData) {
       setTimeout(() => setActivePuzzle({ animal, ...puzzleData }), 350);
@@ -213,13 +284,16 @@ export function ExplorationScreen({ route, navigation }: Props) {
     }
   };
 
-  // ── Puzzle callbacks ───────────────────────────────────────────
+  // ── Puzzle callbacks ──────────────────────────────────────────
 
   const handlePuzzleCorrect = (bonusXP: number) => {
     if (!activePuzzle) return;
-    gainXP(bonusXP);
-    tryIncreaseFriendship(activePuzzle.animal, true); // extra friendship boost
-    setXpGained((prev) => prev + bonusXP);
+    // Golden Journal: double the puzzle bonus (already doubled in PuzzleModal display;
+    // here we apply the actual doubled amount)
+    const actualXP = hasGoldenJournal ? bonusXP * 2 : bonusXP;
+    gainXP(actualXP);
+    tryIncreaseFriendship(activePuzzle.animal, true);
+    setXpGained((prev) => prev + actualXP);
     setActivePuzzle(null);
     if (sessionFinds >= 3) setTimeout(() => setShowSessionEnd(true), 600);
   };
@@ -229,7 +303,12 @@ export function ExplorationScreen({ route, navigation }: Props) {
     if (sessionFinds >= 3) setTimeout(() => setShowSessionEnd(true), 600);
   };
 
-  // ── Bubble close ───────────────────────────────────────────────
+  const handleHintUsed = () => {
+    setHintAvailable(false);
+    setHintUsed(true);
+  };
+
+  // ── Bubble close ──────────────────────────────────────────────
 
   const closeBubble = () => {
     Animated.timing(bubbleOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
@@ -243,7 +322,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
       ]
     : '';
 
-  // ── Render ─────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────
 
   return (
     <View style={styles.container}>
@@ -268,6 +347,32 @@ export function ExplorationScreen({ route, navigation }: Props) {
         <XPBar xp={xp} level={level} showTitle={false} />
       </View>
 
+      {/* Active power-up chips */}
+      {(hasBinoculars || hasRainBoots || (hasLantern && hintAvailable)) && (
+        <View style={styles.powerupChips}>
+          {hasBinoculars && (
+            <View style={[styles.chip, { backgroundColor: '#E3F2FD' }]}>
+              <Text style={styles.chipText}>🔭 +1 animal</Text>
+            </View>
+          )}
+          {hasRainBoots && (
+            <View style={[styles.chip, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={styles.chipText}>🌧️ +25% XP</Text>
+            </View>
+          )}
+          {hasLantern && hintAvailable && (
+            <View style={[styles.chip, { backgroundColor: '#FFF9C4' }]}>
+              <Text style={styles.chipText}>🏮 hint ready</Text>
+            </View>
+          )}
+          {hasGoldenJournal && (
+            <View style={[styles.chip, { backgroundColor: '#FFF8E1' }]}>
+              <Text style={styles.chipText}>📒 2× puzzle XP</Text>
+            </View>
+          )}
+        </View>
+      )}
+
       {/* Scene */}
       <TouchableWithoutFeedback onPress={handleScenePress}>
         <View style={styles.sceneContainer}>
@@ -291,7 +396,10 @@ export function ExplorationScreen({ route, navigation }: Props) {
                   {
                     left: spawned.x - 40,
                     bottom: SCENE_H - GROUND_Y,
-                    transform: [{ translateY: spawned.bounceAnim }],
+                    transform: [
+                      { translateY: spawned.bounceAnim },
+                      { scale: spawned.scaleAnim },
+                    ],
                     opacity: spawned.found ? 0.4 : 1,
                   },
                 ]}
@@ -307,11 +415,14 @@ export function ExplorationScreen({ route, navigation }: Props) {
                     accentColor={spawned.animal.accentColor}
                   />
                   {spawned.found && <Text style={styles.heartBadge}>❤️</Text>}
-                  {spawned.animal.rarity === 'legendary' && !isDiscovered && (
+                  {spawned.isBonus && !spawned.found && (
+                    <Text style={styles.bonusBadge}>🔭</Text>
+                  )}
+                  {spawned.animal.rarity === 'legendary' && !isDiscovered && !spawned.isBonus && (
                     <Text style={styles.rareBadge}>✨</Text>
                   )}
                 </TouchableOpacity>
-                {/* Friendship hearts below animal */}
+                {/* Friendship hearts */}
                 {isDiscovered && (
                   <View style={styles.miniHearts}>
                     {Array.from({ length: MAX_FRIENDSHIP }, (_, i) => (
@@ -365,7 +476,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Info panel */}
+      {/* Info / session end panel */}
       {!selectedAnimal && !showSessionEnd && !activePuzzle && (
         <View style={styles.infoPanel}>
           <Text style={styles.infoPanelTitle}>{location.name}</Text>
@@ -374,7 +485,6 @@ export function ExplorationScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Session end */}
       {showSessionEnd && !selectedAnimal && !activePuzzle && (
         <View style={styles.sessionEnd}>
           <Text style={styles.sessionEndTitle}>Amazing exploring! 🎉</Text>
@@ -399,6 +509,23 @@ export function ExplorationScreen({ route, navigation }: Props) {
             />
           </View>
         </View>
+      )}
+
+      {/* Rain Boots XP toast */}
+      {rainToast && (
+        <Animated.View
+          style={[
+            styles.rainToast,
+            {
+              opacity: rainToastAnim,
+              transform: [
+                { translateY: rainToastAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.rainToastText}>{rainToast}</Text>
+        </Animated.View>
       )}
 
       {/* New companion toast */}
@@ -426,6 +553,9 @@ export function ExplorationScreen({ route, navigation }: Props) {
           animalEmoji={activePuzzle.animal.emoji}
           puzzle={activePuzzle.puzzle}
           bonusXP={activePuzzle.bonusXP}
+          hasLanternHint={hasLantern && hintAvailable}
+          hasGoldenJournal={hasGoldenJournal}
+          onHintUsed={handleHintUsed}
           onCorrect={handlePuzzleCorrect}
           onDismiss={handlePuzzleDismiss}
         />
@@ -462,6 +592,27 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     backgroundColor: 'rgba(0,0,0,0.04)',
   },
+
+  // Power-up status chips
+  powerupChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+  },
+  chip: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.TEXT_DARK,
+  },
+
   sceneContainer: {
     height: SCENE_H,
     width,
@@ -476,9 +627,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 1,
   },
-  miniHeart: {
-    fontSize: 7,
-  },
+  miniHeart: { fontSize: 7 },
   animalNameLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -497,6 +646,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   rareBadge: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    fontSize: 16,
+  },
+  bonusBadge: {
     position: 'absolute',
     top: -8,
     left: -8,
@@ -564,6 +719,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
   },
+
+  // Rain Boots bonus toast
+  rainToast: {
+    position: 'absolute',
+    bottom: 180,
+    alignSelf: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 2,
+    borderColor: '#81C784',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  rainToastText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#2E7D32',
+  },
+
   companionToast: {
     position: 'absolute',
     top: 110,

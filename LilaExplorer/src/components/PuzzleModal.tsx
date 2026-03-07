@@ -18,11 +18,50 @@ interface Props {
   animalEmoji: string;
   puzzle: Puzzle;
   bonusXP: number;
+  hasLanternHint?: boolean;   // one hint available this area visit
+  hasGoldenJournal?: boolean; // doubles puzzle XP + gold star shower
+  onHintUsed?: () => void;    // tell parent hint is consumed
   onCorrect: (xp: number) => void;
   onDismiss: () => void;
 }
 
 type UIState = 'question' | 'correct' | 'wrong';
+
+// ── Falling star for Golden Journal celebration ───────────────────────────────
+
+function FallingStar({ delay, x }: { delay: number; x: string }) {
+  const fall = useRef(new Animated.Value(-40)).current;
+  const fade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.parallel([
+        Animated.timing(fall, { toValue: 300, duration: 1200, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(700),
+          Animated.timing(fade, { toValue: 0, duration: 500, useNativeDriver: true }),
+        ]),
+      ]),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.Text
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: x as any,
+        fontSize: 20,
+        opacity: fade,
+        transform: [{ translateY: fall }],
+        zIndex: 10,
+      }}
+    >
+      ⭐
+    </Animated.Text>
+  );
+}
 
 export function PuzzleModal({
   visible,
@@ -30,17 +69,31 @@ export function PuzzleModal({
   animalEmoji,
   puzzle,
   bonusXP,
+  hasLanternHint = false,
+  hasGoldenJournal = false,
+  onHintUsed,
   onCorrect,
   onDismiss,
 }: Props) {
   const [uiState, setUiState] = useState<UIState>('question');
   const [usedRetry, setUsedRetry] = useState(false);
+
+  // Lantern: which choice index is crossed out
+  const [eliminatedIndex, setEliminatedIndex] = useState<number | null>(null);
+  const lanternPulse = useRef(new Animated.Value(1)).current;
+
+  // Card entrance
   const scaleAnim = useRef(new Animated.Value(0.88)).current;
+
+  // Golden Journal stars
+  const [showStars, setShowStars] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setUiState('question');
       setUsedRetry(false);
+      setEliminatedIndex(null);
+      setShowStars(false);
       scaleAnim.setValue(0.88);
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -51,44 +104,83 @@ export function PuzzleModal({
     }
   }, [visible]);
 
+  // Lantern pulse when hint is available
+  useEffect(() => {
+    if (!hasLanternHint || eliminatedIndex !== null) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(lanternPulse, { toValue: 1.18, duration: 700, useNativeDriver: true }),
+        Animated.timing(lanternPulse, { toValue: 1,    duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [hasLanternHint, eliminatedIndex]);
+
+  // ── Hint: eliminate one random wrong answer ───────────────────────────────
+
+  const handleHint = () => {
+    if (!hasLanternHint || eliminatedIndex !== null) return;
+
+    let wrongIndices: number[] = [];
+    if (puzzle.type === 'choice' || puzzle.type === 'which') {
+      wrongIndices = puzzle.choices
+        .map((_, i) => i)
+        .filter((i) => i !== puzzle.correct);
+    }
+    if (wrongIndices.length === 0) return;
+
+    const pick = wrongIndices[Math.floor(Math.random() * wrongIndices.length)];
+    setEliminatedIndex(pick);
+    lanternPulse.setValue(1);
+    audioManager.playSfx('whoosh');
+    onHintUsed?.();
+  };
+
+  // ── Answer handler ────────────────────────────────────────────────────────
+
   const handleAnswer = (correct: boolean) => {
     if (correct) {
       setUiState('correct');
       audioManager.playSfx('levelup');
-      setTimeout(() => onCorrect(bonusXP), 2000);
+      if (hasGoldenJournal) setShowStars(true);
+      setTimeout(() => onCorrect(bonusXP), 2200);
     } else if (!usedRetry) {
-      // First wrong: allow one retry
       setUiState('wrong');
       setUsedRetry(true);
       audioManager.playSfx('whoosh');
       setTimeout(() => setUiState('question'), 1400);
     } else {
-      // Second wrong: close gently
       setUiState('wrong');
       audioManager.playSfx('whoosh');
       setTimeout(() => onDismiss(), 1400);
     }
   };
 
-  // ── Choice renderers ─────────────────────────────────────────────
+  // ── Choice renderers ──────────────────────────────────────────────────────
 
   const renderChoices = () => {
     if (uiState !== 'question') return null;
 
-    // Text choices — math word problems, reading comprehension, knowledge
     if (puzzle.type === 'choice') {
       return (
         <View style={styles.choicesCol}>
-          {puzzle.choices.map((text, i) => (
-            <TouchableOpacity
-              key={i}
-              style={styles.choiceTextBtn}
-              onPress={() => handleAnswer(i === puzzle.correct)}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.choiceTextBtnText}>{text}</Text>
-            </TouchableOpacity>
-          ))}
+          {puzzle.choices.map((text, i) => {
+            const isEliminated = eliminatedIndex === i;
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[styles.choiceTextBtn, isEliminated && styles.choiceEliminated]}
+                onPress={() => !isEliminated && handleAnswer(i === puzzle.correct)}
+                activeOpacity={isEliminated ? 1 : 0.75}
+                disabled={isEliminated}
+              >
+                <Text style={[styles.choiceTextBtnText, isEliminated && styles.choiceEliminatedText]}>
+                  {isEliminated ? '✗  ' : ''}{text}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       );
     }
@@ -96,16 +188,21 @@ export function PuzzleModal({
     if (puzzle.type === 'which') {
       return (
         <View style={styles.choicesRow}>
-          {puzzle.choices.map((emoji, i) => (
-            <TouchableOpacity
-              key={i}
-              style={styles.emojiBtn}
-              onPress={() => handleAnswer(i === puzzle.correct)}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.emojiBtnText}>{emoji}</Text>
-            </TouchableOpacity>
-          ))}
+          {puzzle.choices.map((emoji, i) => {
+            const isEliminated = eliminatedIndex === i;
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[styles.emojiBtn, isEliminated && styles.choiceEliminated]}
+                onPress={() => !isEliminated && handleAnswer(i === puzzle.correct)}
+                activeOpacity={isEliminated ? 1 : 0.75}
+                disabled={isEliminated}
+              >
+                <Text style={[styles.emojiBtnText, isEliminated && { opacity: 0.25 }]}>{emoji}</Text>
+                {isEliminated && <Text style={styles.xMark}>✗</Text>}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       );
     }
@@ -136,7 +233,7 @@ export function PuzzleModal({
     return null;
   };
 
-  // ── Question text ────────────────────────────────────────────────
+  // ── Question text ─────────────────────────────────────────────────────────
 
   const questionText =
     puzzle.type === 'choice'
@@ -145,29 +242,54 @@ export function PuzzleModal({
       ? puzzle.question
       : puzzle.statement;
 
-  // No extra display element needed now — choice questions stand alone
+  const displayBonusXP = hasGoldenJournal ? bonusXP * 2 : bonusXP;
 
-  // ── Render ───────────────────────────────────────────────────────
+  const starPositions = ['8%', '22%', '38%', '55%', '70%', '85%'];
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
           <LinearGradient
-            colors={['#FFF9C4', '#E8F5E9', '#FFF3E0']}
+            colors={hasGoldenJournal ? ['#FFFDE7', '#FFF9C4', '#FFF3E0'] : ['#FFF9C4', '#E8F5E9', '#FFF3E0']}
             style={styles.gradient}
           >
+            {/* Golden star shower */}
+            {showStars && starPositions.map((x, i) => (
+              <FallingStar key={i} delay={i * 120} x={x} />
+            ))}
+
             {uiState === 'question' && (
               <>
                 <Text style={styles.animalEmoji}>{animalEmoji}</Text>
                 <Text style={styles.challengeLabel}>
                   {animalName.split(' ')[0]} has a puzzle for you! 🌟
                 </Text>
+                {hasGoldenJournal && (
+                  <View style={styles.goldenBadge}>
+                    <Text style={styles.goldenBadgeText}>📒 2× XP bonus active!</Text>
+                  </View>
+                )}
                 <View style={styles.divider} />
 
                 <Text style={styles.questionText}>{questionText}</Text>
 
                 {renderChoices()}
+
+                {/* Lantern hint button */}
+                {hasLanternHint && eliminatedIndex === null &&
+                  (puzzle.type === 'choice' || puzzle.type === 'which') && (
+                  <Animated.View style={{ transform: [{ scale: lanternPulse }], marginBottom: 8 }}>
+                    <TouchableOpacity style={styles.hintBtn} onPress={handleHint} activeOpacity={0.8}>
+                      <Text style={styles.hintBtnText}>🏮 Use lantern hint</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
+                {eliminatedIndex !== null && (
+                  <Text style={styles.hintUsedText}>🏮 One wrong answer lit up!</Text>
+                )}
 
                 <TouchableOpacity style={styles.skipBtn} onPress={onDismiss}>
                   <Text style={styles.skipText}>Maybe later 🌿</Text>
@@ -179,7 +301,12 @@ export function PuzzleModal({
               <View style={styles.feedback}>
                 <Text style={styles.feedbackEmoji}>🎉</Text>
                 <Text style={styles.feedbackTitle}>Amazing!</Text>
-                <Text style={styles.feedbackSub}>+{bonusXP} bonus XP!</Text>
+                <Text style={styles.feedbackSub}>
+                  +{displayBonusXP} bonus XP{hasGoldenJournal ? ' ⭐' : '!'}
+                </Text>
+                {hasGoldenJournal && (
+                  <Text style={styles.goldenDoubleText}>Golden Journal 2× ✨</Text>
+                )}
                 <Text style={styles.feedbackExtra}>
                   {animalName.split(' ')[0]} thinks you're great! ❤️
                 </Text>
@@ -236,7 +363,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: C.TEXT_DARK,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 6,
+  },
+  goldenBadge: {
+    backgroundColor: '#FFD54F',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  goldenBadgeText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#5D4037',
   },
   divider: {
     height: 2,
@@ -253,11 +392,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 25,
   },
-  // Text answer choices (choice type)
+  // Text choices
   choicesCol: {
     alignSelf: 'stretch',
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   choiceTextBtn: {
     backgroundColor: 'white',
@@ -272,6 +411,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  choiceEliminated: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#BDBDBD',
+    opacity: 0.55,
+  },
+  choiceEliminatedText: {
+    textDecorationLine: 'line-through',
+    color: '#9E9E9E',
+  },
   choiceTextBtnText: {
     fontSize: 15,
     fontWeight: '700',
@@ -279,13 +427,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 21,
   },
-  // Emoji choices (which type)
+  // Emoji choices
   choicesRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 12,
   },
-  // Which choices
   emojiBtn: {
     width: 80,
     height: 80,
@@ -300,14 +447,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  emojiBtnText: {
-    fontSize: 38,
+  emojiBtnText: { fontSize: 38 },
+  xMark: {
+    position: 'absolute',
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#E53935',
   },
-  // True/False choices
+  // True/False
   tfRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   tfBtn: {
     flex: 1,
@@ -320,18 +471,36 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  tfEmoji: {
-    fontSize: 28,
-    marginBottom: 4,
+  tfEmoji: { fontSize: 28, marginBottom: 4 },
+  tfText: { fontSize: 15, fontWeight: '800', color: C.TEXT_DARK },
+  // Lantern hint
+  hintBtn: {
+    backgroundColor: '#FFF9C4',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderWidth: 2,
+    borderColor: '#F9A825',
+    shadowColor: '#F9A825',
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  tfText: {
-    fontSize: 15,
+  hintBtnText: {
+    fontSize: 14,
     fontWeight: '800',
-    color: C.TEXT_DARK,
+    color: '#E65100',
+  },
+  hintUsedText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E65100',
+    marginBottom: 8,
   },
   skipBtn: {
     paddingVertical: 8,
     paddingHorizontal: 16,
+    marginTop: 4,
   },
   skipText: {
     fontSize: 14,
@@ -343,10 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
-  feedbackEmoji: {
-    fontSize: 72,
-    marginBottom: 8,
-  },
+  feedbackEmoji: { fontSize: 72, marginBottom: 8 },
   feedbackTitle: {
     fontSize: 28,
     fontWeight: '900',
@@ -357,6 +523,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: C.XP_FILL,
+    marginBottom: 4,
+  },
+  goldenDoubleText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#F57F17',
     marginBottom: 6,
   },
   feedbackExtra: {
