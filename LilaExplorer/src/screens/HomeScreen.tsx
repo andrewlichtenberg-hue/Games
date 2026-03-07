@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
@@ -81,7 +80,6 @@ export function HomeScreen({ navigation }: Props) {
   return (
     <>
       <LinearGradient colors={['#E8F5E9', '#FFF9C4', '#FFF3E0']} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* Header */}
           <LinearGradient
             colors={['#6C5CE7', '#A29BFE']}
@@ -106,8 +104,8 @@ export function HomeScreen({ navigation }: Props) {
             </View>
           </LinearGradient>
 
-          {/* Companion room */}
-          <View style={styles.section}>
+          {/* Companion room — stretches to fill remaining space */}
+          <View style={styles.roomSection}>
             <Text style={styles.sectionTitle}>🏡 Lila's Room</Text>
             <View style={styles.room}>
               <LinearGradient
@@ -201,7 +199,6 @@ export function HomeScreen({ navigation }: Props) {
             size="large"
             style={styles.bigExplore}
           />
-        </ScrollView>
       </LinearGradient>
 
       {/* Level-up modal */}
@@ -219,45 +216,46 @@ export function HomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { paddingBottom: 40 },
   header: {
-    paddingTop: 56,
-    paddingBottom: 20,
+    paddingTop: 48,
+    paddingBottom: 14,
     paddingHorizontal: 20,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   greeting: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
     color: 'white',
   },
   headerSub: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
     fontWeight: '600',
     marginTop: 2,
   },
   xpContainer: {
-    marginTop: 4,
+    marginTop: 2,
   },
-  section: {
-    marginTop: 20,
+  roomSection: {
+    flex: 1,
+    marginTop: 12,
     paddingHorizontal: 16,
+    minHeight: 120,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: C.TEXT_DARK,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   room: {
+    flex: 1,
     borderRadius: 20,
     overflow: 'hidden',
-    height: 180,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -313,7 +311,7 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10,
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 14,
@@ -346,8 +344,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 16,
-    gap: 10,
-    marginTop: 16,
+    gap: 8,
+    marginTop: 10,
   },
   navCard: {
     flex: 1,
@@ -379,6 +377,7 @@ const styles = StyleSheet.create({
   },
   bigExplore: {
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10,
+    marginBottom: 14,
   },
 });
