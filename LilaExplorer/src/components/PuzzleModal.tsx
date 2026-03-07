@@ -139,8 +139,8 @@ export function PuzzleModal({
   // ── Question text ────────────────────────────────────────────────
 
   const questionText =
-    puzzle.type === 'count'
-      ? `How many ${puzzle.emoji}?`
+    puzzle.type === 'choice'
+      ? puzzle.question
       : puzzle.type === 'which'
       ? puzzle.question
       : puzzle.statement;
