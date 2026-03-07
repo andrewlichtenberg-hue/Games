@@ -4,14 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Dimensions,
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
-import Svg, { Ellipse, Path, Rect, Circle, G, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { C } from '../utils/colors';
 import { LOCATIONS, Location } from '../game/locations';
@@ -19,167 +17,150 @@ import { useGameStore } from '../store/gameStore';
 import { audioManager } from '../audio/audioManager';
 import type { RootStackParamList } from '../../App';
 
+// ── Layout math ──────────────────────────────────────────────────────────────
+// Card grid fills the screen exactly — no scroll needed on iPad.
+
 const { width, height } = Dimensions.get('window');
-const MAP_W = width;
-const MAP_H = height * 0.55;
+const IS_IPAD = width >= 768;
+const NUM_COLS = IS_IPAD ? 3 : 2;
+const NUM_ROWS = Math.ceil(LOCATIONS.length / NUM_COLS); // 4 rows on iPad, 5 on phone
+const HEADER_H = IS_IPAD ? 100 : 120; // compact on iPad
+const GRID_PAD = IS_IPAD ? 16 : 12;
+const CARD_GAP = IS_IPAD ? 14 : 10;
+const CARD_W = (width - GRID_PAD * 2 - CARD_GAP * (NUM_COLS - 1)) / NUM_COLS;
+const CARD_H = Math.floor(
+  (height - HEADER_H - GRID_PAD * 2 - CARD_GAP * (NUM_ROWS - 1)) / NUM_ROWS
+);
+
+// Scene emoji per type
+const SCENE_EMOJI: Record<string, string> = {
+  park:     '🌳',
+  beach:    '🏖️',
+  forest:   '🌲',
+  mountain: '⛰️',
+  city:     '🏙️',
+};
 
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'WorldMap'> };
 
-function MapPin({
+// ── Individual location card ──────────────────────────────────────────────────
+
+function LocationCard({
   location,
   unlocked,
   visited,
+  animalFoundCount,
   onPress,
 }: {
   location: Location;
   unlocked: boolean;
   visited: boolean;
+  animalFoundCount: number;
   onPress: () => void;
 }) {
-  const pulse = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isNew = unlocked && !visited;
 
   React.useEffect(() => {
-    if (unlocked && !visited) {
+    if (isNew) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulse, { toValue: 1.18, duration: 700, useNativeDriver: true }),
-          Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.03, duration: 900, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1,    duration: 900, useNativeDriver: true }),
         ])
       ).start();
+    } else {
+      pulseAnim.setValue(1);
     }
-  }, [unlocked, visited]);
+  }, [isNew]);
 
-  const x = location.mapX * MAP_W;
-  const y = location.mapY * MAP_H;
-  const pinColor = unlocked ? location.accentColor : '#BDBDBD';
+  const emoji = SCENE_EMOJI[location.sceneType] ?? '🌍';
+  const totalAnimals = location.animalIds.length;
+  const emojiSize = IS_IPAD ? 56 : 40;
 
   return (
     <Animated.View
       style={[
-        styles.pin,
-        {
-          left: x - 22,
-          top: y - 44,
-          transform: [{ scale: pulse }],
-        },
+        styles.cardWrap,
+        { width: CARD_W, height: CARD_H },
+        { transform: [{ scale: pulseAnim }] },
+        !unlocked && styles.cardWrapLocked,
       ]}
     >
       <TouchableOpacity
+        style={styles.card}
         onPress={() => {
-          if (!unlocked) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          } else {
+          if (unlocked) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             onPress();
+          } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           }
         }}
-        activeOpacity={0.8}
+        activeOpacity={unlocked ? 0.8 : 0.97}
       >
-        <View style={[styles.pinBubble, { backgroundColor: unlocked ? 'white' : '#EEE' }]}>
-          {unlocked ? (
-            <Text style={styles.pinEmoji}>
-              {location.sceneType === 'park' ? '🌳' :
-               location.sceneType === 'beach' ? '🏖️' :
-               location.sceneType === 'forest' ? '🌲' :
-               location.sceneType === 'mountain' ? '⛰️' : '🏙️'}
-            </Text>
-          ) : (
-            <Text style={styles.pinEmoji}>🔒</Text>
-          )}
-        </View>
-        <View style={[styles.pinStem, { backgroundColor: pinColor }]} />
-        <Text
-          style={[
-            styles.pinLabel,
-            { color: unlocked ? C.TEXT_DARK : C.TEXT_LIGHT },
-          ]}
-          numberOfLines={1}
+        {/* Sky — top 60% */}
+        <LinearGradient
+          colors={[location.skyTop, location.skyBottom]}
+          style={styles.cardSky}
         >
-          {unlocked ? location.name : `Lv ${location.unlockLevel}`}
-        </Text>
+          <Text style={[styles.cardEmoji, { fontSize: emojiSize }]}>{emoji}</Text>
+
+          {/* Visited tick */}
+          {visited && (
+            <View style={styles.visitedBadge}>
+              <Text style={styles.visitedText}>✓</Text>
+            </View>
+          )}
+          {/* "New!" sparkle */}
+          {isNew && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newText}>✨</Text>
+            </View>
+          )}
+        </LinearGradient>
+
+        {/* Ground — bottom 40% */}
+        <View style={[styles.cardGround, { backgroundColor: location.groundColor }]}>
+          <Text style={styles.cardName} numberOfLines={1}>{location.name}</Text>
+          <Text style={styles.cardSub} numberOfLines={1}>{location.subtitle}</Text>
+          <View style={styles.animalRow}>
+            <Text style={styles.animalCount}>
+              {animalFoundCount > 0
+                ? `${animalFoundCount}/${totalAnimals} animals`
+                : `${totalAnimals} animals`}
+            </Text>
+            {/* Small paw dots per animal discovered */}
+            <View style={styles.pawDots}>
+              {location.animalIds.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.pawDot,
+                    { backgroundColor: i < animalFoundCount ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.3)' },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* Lock overlay for locked locations */}
+        {!unlocked && (
+          <View style={styles.lockOverlay}>
+            <Text style={styles.lockEmoji}>🔒</Text>
+            <Text style={styles.lockLevel}>Level {location.unlockLevel}</Text>
+          </View>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-function MapIllustration() {
-  return (
-    <Svg width={MAP_W} height={MAP_H} viewBox={`0 0 ${MAP_W} ${MAP_H}`}>
-      <Defs>
-        <SvgGradient id="ocean" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#1565C0" />
-          <Stop offset="1" stopColor="#42A5F5" />
-        </SvgGradient>
-        <SvgGradient id="land" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#66BB6A" />
-          <Stop offset="1" stopColor="#AED581" />
-        </SvgGradient>
-      </Defs>
-
-      {/* Ocean background */}
-      <Rect x={0} y={0} width={MAP_W} height={MAP_H} fill="url(#ocean)" />
-
-      {/* Northeast US landmass (simplified) */}
-      <Path
-        d={`
-          M ${MAP_W*0.3},0
-          L ${MAP_W*0.9},0
-          L ${MAP_W*0.9},${MAP_H*0.7}
-          Q ${MAP_W*0.78},${MAP_H*0.85} ${MAP_W*0.65},${MAP_H*0.9}
-          Q ${MAP_W*0.55},${MAP_H*0.95} ${MAP_W*0.45},${MAP_H*0.85}
-          Q ${MAP_W*0.35},${MAP_H*0.75} ${MAP_W*0.3},${MAP_H*0.6}
-          Z
-        `}
-        fill="url(#land)"
-      />
-
-      {/* Mountain ridges */}
-      <Path
-        d={`M ${MAP_W*0.4},${MAP_H*0.2} Q ${MAP_W*0.52},${MAP_H*0.1} ${MAP_W*0.64},${MAP_H*0.25}`}
-        stroke="#8D6E63"
-        strokeWidth={3}
-        fill="none"
-        opacity={0.4}
-      />
-
-      {/* Hudson River */}
-      <Path
-        d={`M ${MAP_W*0.59},0 Q ${MAP_W*0.6},${MAP_H*0.3} ${MAP_W*0.62},${MAP_H*0.55}`}
-        stroke="#42A5F5"
-        strokeWidth={5}
-        fill="none"
-        opacity={0.6}
-      />
-
-      {/* Atlantic coast detail */}
-      <Path
-        d={`M ${MAP_W*0.62},${MAP_H*0.45} Q ${MAP_W*0.68},${MAP_H*0.38} ${MAP_W*0.72},${MAP_H*0.3} Q ${MAP_W*0.74},${MAP_H*0.2} ${MAP_W*0.7},${MAP_H*0.1}`}
-        stroke="#90CAF9"
-        strokeWidth={3}
-        fill="none"
-        opacity={0.5}
-      />
-
-      {/* Tiny wave marks */}
-      {[0.1, 0.2, 0.25].map((y, i) => (
-        <Path
-          key={i}
-          d={`M ${MAP_W*0.05},${MAP_H*y} Q ${MAP_W*0.12},${MAP_H*(y-0.02)} ${MAP_W*0.18},${MAP_H*y}`}
-          stroke="rgba(255,255,255,0.3)"
-          strokeWidth={2}
-          fill="none"
-        />
-      ))}
-
-      {/* NYC star */}
-      <Circle cx={MAP_W*0.62} cy={MAP_H*0.51} r={6} fill="#FF6B9D" />
-      <Circle cx={MAP_W*0.62} cy={MAP_H*0.51} r={3} fill="white" />
-    </Svg>
-  );
-}
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 export function WorldMapScreen({ navigation }: Props) {
-  const { unlockedLocations, visitedLocations, level } = useGameStore();
+  const { unlockedLocations, visitedLocations, discoveredAnimals, level } = useGameStore();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -187,188 +168,197 @@ export function WorldMapScreen({ navigation }: Props) {
     }, [])
   );
 
-  const handleLocationPress = (location: Location) => {
-    navigation.navigate('Exploration', { locationId: location.id });
-  };
+  // Chunk into rows of NUM_COLS
+  const rows: Location[][] = [];
+  for (let i = 0; i < LOCATIONS.length; i += NUM_COLS) {
+    rows.push(LOCATIONS.slice(i, i + NUM_COLS));
+  }
 
   return (
-    <View style={styles.container}>
-      {/* Map header */}
-      <LinearGradient colors={['#1565C0', '#42A5F5']} style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-        >
+    <LinearGradient colors={['#E8F5E9', '#E3F2FD']} style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Home</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🗺️ Explorer Map</Text>
-        <Text style={styles.subtitle}>Tap a location to explore!</Text>
-      </LinearGradient>
-
-      {/* Interactive map */}
-      <View style={styles.mapContainer}>
-        <MapIllustration />
-        {LOCATIONS.map((loc) => {
-          const unlocked = unlockedLocations.includes(loc.id);
-          const visited = visitedLocations.includes(loc.id);
-          return (
-            <MapPin
-              key={loc.id}
-              location={loc}
-              unlocked={unlocked}
-              visited={visited}
-              onPress={() => handleLocationPress(loc)}
-            />
-          );
-        })}
+        <Text style={styles.title}>Where do you want to explore? 🗺️</Text>
       </View>
 
-      {/* Location list below map */}
-      <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-        <Text style={styles.listHeader}>All Locations</Text>
-        {LOCATIONS.map((loc) => {
-          const unlocked = unlockedLocations.includes(loc.id);
-          const visited = visitedLocations.includes(loc.id);
-          return (
-            <TouchableOpacity
-              key={loc.id}
-              style={[styles.listItem, !unlocked && styles.listItemLocked]}
-              onPress={() => {
-                if (unlocked) {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  handleLocationPress(loc);
-                }
-              }}
-              activeOpacity={unlocked ? 0.75 : 1}
-            >
-              <Text style={styles.listEmoji}>
-                {!unlocked ? '🔒' :
-                  loc.sceneType === 'park' ? '🌳' :
-                  loc.sceneType === 'beach' ? '🏖️' :
-                  loc.sceneType === 'forest' ? '🌲' :
-                  loc.sceneType === 'mountain' ? '⛰️' : '🏙️'}
-              </Text>
-              <View style={styles.listText}>
-                <Text style={[styles.listName, !unlocked && { color: C.TEXT_LIGHT }]}>
-                  {loc.name}
-                </Text>
-                <Text style={styles.listSub}>
-                  {unlocked
-                    ? `${loc.animalIds.length} animals • ${visited ? '✓ Visited' : 'Not yet visited'}`
-                    : `Unlocks at Level ${loc.unlockLevel}`}
-                </Text>
-              </View>
-              {unlocked && (
-                <Text style={[styles.listArrow, { color: loc.accentColor }]}>›</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-        <View style={{ height: 32 }} />
-      </ScrollView>
-    </View>
+      {/* Card grid */}
+      <View style={[styles.grid, { padding: GRID_PAD, gap: CARD_GAP }]}>
+        {rows.map((row, r) => (
+          <View key={r} style={[styles.row, { gap: CARD_GAP }]}>
+            {row.map((loc) => {
+              const unlocked = unlockedLocations.includes(loc.id);
+              const visited = visitedLocations.includes(loc.id);
+              const found = loc.animalIds.filter((id) => discoveredAnimals.includes(id)).length;
+              return (
+                <LocationCard
+                  key={loc.id}
+                  location={loc}
+                  unlocked={unlocked}
+                  visited={visited}
+                  animalFoundCount={found}
+                  onPress={() => navigation.navigate('Exploration', { locationId: loc.id })}
+                />
+              );
+            })}
+            {/* Fill last row if incomplete */}
+            {row.length < NUM_COLS &&
+              Array(NUM_COLS - row.length).fill(0).map((_, i) => (
+                <View key={`spacer-${i}`} style={{ width: CARD_W, height: CARD_H }} />
+              ))}
+          </View>
+        ))}
+      </View>
+    </LinearGradient>
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E3F2FD' },
+  container: { flex: 1 },
+
   header: {
-    paddingTop: 52,
-    paddingBottom: 14,
-    paddingHorizontal: 20,
+    paddingTop: IS_IPAD ? 48 : 52,
+    paddingBottom: IS_IPAD ? 12 : 10,
+    paddingHorizontal: GRID_PAD,
+    height: HEADER_H,
+    justifyContent: 'flex-end',
   },
-  backBtn: { marginBottom: 6 },
-  backText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  backBtn: { position: 'absolute', top: IS_IPAD ? 54 : 58, left: GRID_PAD },
+  backText: { fontSize: 15, fontWeight: '700', color: C.TEXT_MID },
   title: {
-    fontSize: 26,
+    fontSize: IS_IPAD ? 22 : 18,
     fontWeight: '900',
-    color: 'white',
+    color: C.TEXT_DARK,
+    marginBottom: 4,
   },
-  subtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '600',
-    marginTop: 2,
+
+  grid: {
+    flex: 1,
   },
-  mapContainer: {
-    height: MAP_H,
-    width: MAP_W,
-    position: 'relative',
+  row: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+
+  // Card shell
+  cardWrap: {
+    borderRadius: 22,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
-  pin: {
-    position: 'absolute',
-    alignItems: 'center',
-    width: 44,
+  cardWrapLocked: {
+    shadowOpacity: 0.05,
   },
-  pinBubble: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  card: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 22,
+  },
+
+  // Top sky section
+  cardSky: {
+    flex: 3,  // 60% of card height
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#DDD',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    position: 'relative',
   },
-  pinEmoji: { fontSize: 20 },
-  pinStem: {
-    width: 3,
-    height: 8,
-    alignSelf: 'center',
-    borderRadius: 2,
+  cardEmoji: {
+    // fontSize set dynamically
   },
-  pinLabel: {
-    fontSize: 8,
+
+  // Visited / New badges (top-right corner of sky)
+  visitedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: 12,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  visitedText: { fontSize: 14, fontWeight: '900', color: '#27AE60' },
+  newBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: 12,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newText: { fontSize: 16 },
+
+  // Bottom ground section
+  cardGround: {
+    flex: 2,  // 40% of card height
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  cardName: {
+    fontSize: IS_IPAD ? 15 : 12,
+    fontWeight: '900',
+    color: 'white',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  cardSub: {
+    fontSize: IS_IPAD ? 11 : 10,
     fontWeight: '700',
-    textAlign: 'center',
-    width: 60,
-    marginLeft: -8,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 1,
   },
-  list: {
-    flex: 1,
-    backgroundColor: 'white',
-    paddingHorizontal: 16,
-  },
-  listHeader: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: C.TEXT_DARK,
-    paddingTop: 14,
-    paddingBottom: 8,
-  },
-  listItem: {
+  animalRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    marginTop: 4,
+    gap: 6,
   },
-  listItemLocked: {
-    opacity: 0.5,
-  },
-  listEmoji: { fontSize: 24, marginRight: 12 },
-  listText: { flex: 1 },
-  listName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: C.TEXT_DARK,
-  },
-  listSub: {
-    fontSize: 12,
-    color: C.TEXT_MID,
-    marginTop: 2,
-    fontWeight: '600',
-  },
-  listArrow: {
-    fontSize: 24,
+  animalCount: {
+    fontSize: IS_IPAD ? 11 : 10,
     fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  pawDots: {
+    flexDirection: 'row',
+    gap: 3,
+    flexWrap: 'wrap',
+  },
+  pawDot: {
+    width: IS_IPAD ? 7 : 6,
+    height: IS_IPAD ? 7 : 6,
+    borderRadius: 4,
+  },
+
+  // Lock overlay
+  lockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(200,200,210,0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  lockEmoji: { fontSize: IS_IPAD ? 44 : 34 },
+  lockLevel: {
+    fontSize: IS_IPAD ? 16 : 14,
+    fontWeight: '900',
+    color: '#555',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
 });
