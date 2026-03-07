@@ -30,6 +30,9 @@
       "bundler": "metro",
       "output": "single"
     },
+    "experiments": {
+      "baseUrl": "/Games"
+    },
     "plugins": [
       [
         "expo-av",
