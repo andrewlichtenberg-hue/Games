@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../utils/haptics';
 import { LilaCharacter } from '../components/LilaCharacter';
 import { BigButton } from '../components/ui/BigButton';
 import { C, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS } from '../utils/colors';
@@ -58,12 +58,12 @@ export function CharacterCreationScreen({ navigation }: Props) {
   const handleConfirm = () => {
     const finalName = name.trim() || 'Lila';
     createCharacter(finalName, hairColor, skinTone, outfitColor);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notification();
     navigation.replace('Home');
   };
 
   const pick = (setter: (v: string) => void, value: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impact();
     setter(value);
   };
 

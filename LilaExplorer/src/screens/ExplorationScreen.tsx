@@ -12,7 +12,7 @@ import {
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
+import { Haptics } from '../utils/haptics';
 import { SceneBackground } from '../components/SceneBackground';
 import { LilaCharacter } from '../components/LilaCharacter';
 import { AnimalSprite } from '../components/AnimalSprite';
@@ -113,7 +113,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     setLilaFacing(tapX > currentX ? 'right' : 'left');
     setLilaCurrentX(tapX - LILA_SIZE / 2);
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impact();
     audioManager.playSfx('walk');
 
     Animated.spring(lilaX, {
@@ -126,7 +126,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
 
   const handleAnimalPress = (spawned: SpawnedAnimal) => {
     if (selectedAnimal) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impact();
     audioManager.playSfx('discover');
 
     // Bounce the animal
@@ -153,7 +153,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     setXpGained((prev) => prev + xpAmount);
     if (isNew) setSessionFinds((prev) => prev + 1);
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notification();
     audioManager.playSfx('success');
 
     // Mark as found and close bubble
