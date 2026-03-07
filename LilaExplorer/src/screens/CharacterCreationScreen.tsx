@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,10 @@ import {
   TextInput,
   TouchableOpacity,
   Dimensions,
-  KeyboardAvoidingView,
+  Animated,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
-// Use gesture-handler's ScrollView so it cooperates with GestureHandlerRootView
-import { ScrollView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Haptics } from '../utils/haptics';
@@ -21,12 +20,16 @@ import { useGameStore } from '../store/gameStore';
 import type { RootStackParamList } from '../../App';
 
 const { width, height } = Dimensions.get('window');
-const IS_SMALL_PHONE = height < 750; // iPhone SE / older models
-const CHAR_SIZE = IS_SMALL_PHONE ? 120 : 160;
+const IS_IPAD = width >= 768;
+
+// Steps: name → skin → hair → outfit → confirm
+const TOTAL_STEPS = 4;
 
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'CharacterCreation'> };
 
-function ColorDot({
+// ── Large swatch button ───────────────────────────────────────────────────────
+
+function Swatch({
   color,
   selected,
   onPress,
@@ -35,28 +38,85 @@ function ColorDot({
   selected: boolean;
   onPress: () => void;
 }) {
+  const scaleAnim = useRef(new Animated.Value(selected ? 1.14 : 1)).current;
+
+  const handlePress = () => {
+    Haptics.impact();
+    Animated.spring(scaleAnim, {
+      toValue: 1.14,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 8,
+    }).start();
+    onPress();
+  };
+
+  React.useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: selected ? 1.14 : 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 6,
+    }).start();
+  }, [selected]);
+
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[
-        styles.colorDot,
-        { backgroundColor: color },
-        selected && styles.colorDotSelected,
-      ]}
-      activeOpacity={0.8}
-    >
-      {selected && <Text style={styles.checkmark}>✓</Text>}
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        onPress={handlePress}
+        style={[
+          styles.swatch,
+          { backgroundColor: color },
+          selected && styles.swatchSelected,
+        ]}
+        activeOpacity={0.85}
+      >
+        {selected && <Text style={styles.swatchCheck}>✓</Text>}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
+
+// ── Step progress dots ────────────────────────────────────────────────────────
+
+function StepDots({ step }: { step: number }) {
+  return (
+    <View style={styles.dots}>
+      {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.dot,
+            i < step && styles.dotDone,
+            i === step && styles.dotActive,
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 
 export function CharacterCreationScreen({ navigation }: Props) {
   const createCharacter = useGameStore((s) => s.createCharacter);
 
-  const [name, setName] = useState('Lila');
-  const [hairColor, setHairColor] = useState(HAIR_COLORS[0]);
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState('');
   const [skinTone, setSkinTone] = useState(SKIN_TONES[1]);
+  const [hairColor, setHairColor] = useState(HAIR_COLORS[0]);
   const [outfitColor, setOutfitColor] = useState(OUTFIT_COLORS[0]);
+
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const advance = (forward = true) => {
+    Haptics.impact();
+    Animated.sequence([
+      Animated.timing(slideAnim, { toValue: forward ? -30 : 30, duration: 80, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start();
+    setStep((s) => s + (forward ? 1 : -1));
+  };
 
   const handleConfirm = () => {
     const finalName = name.trim() || 'Lila';
@@ -65,217 +125,268 @@ export function CharacterCreationScreen({ navigation }: Props) {
     navigation.replace('Home');
   };
 
-  const pick = (setter: (v: string) => void, value: string) => {
-    Haptics.impact();
-    setter(value);
-  };
+  // ── Step content ────────────────────────────────────────────────
 
-  return (
-    <LinearGradient colors={['#E1F5FE', '#F3E5F5']} style={styles.flex}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={[styles.scroll, IS_SMALL_PHONE && styles.scrollCompact]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.header}>Create Your Explorer!</Text>
-          <Text style={styles.subtitle}>Make her look just like you 🌟</Text>
-
-          {/* Live preview */}
-          <View style={styles.previewBox}>
-            <LinearGradient
-              colors={['#B3E5FC', '#E1BEE7']}
-              style={styles.previewGradient}
-            >
-              <LilaCharacter
-                hairColor={hairColor}
-                skinTone={skinTone}
-                outfitColor={outfitColor}
-                equippedHat="hat-explorer"
-                size={CHAR_SIZE}
-              />
-              <Text style={styles.previewName}>{name.trim() || 'Lila'}</Text>
-            </LinearGradient>
-          </View>
-
-          {/* Name input */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Explorer Name</Text>
+  const stepContent = () => {
+    switch (step) {
+      case 0:
+        return (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.stepContent}
+          >
+            <Text style={styles.stepQuestion}>What's your explorer name? 🌟</Text>
             <TextInput
               style={styles.nameInput}
               value={name}
               onChangeText={setName}
-              placeholder="Your name here…"
+              placeholder="Type your name…"
               placeholderTextColor={C.TEXT_LIGHT}
               maxLength={16}
               returnKeyType="done"
               autoCorrect={false}
+              autoFocus={false}
+              onSubmitEditing={() => advance(true)}
             />
-          </View>
-
-          {/* Skin tone */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Skin Tone</Text>
-            <View style={styles.dotRow}>
+          </KeyboardAvoidingView>
+        );
+      case 1:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepQuestion}>Pick your skin tone 👋</Text>
+            <View style={styles.swatchGrid}>
               {SKIN_TONES.map((c) => (
-                <ColorDot
-                  key={c}
-                  color={c}
-                  selected={skinTone === c}
-                  onPress={() => pick(setSkinTone, c)}
-                />
+                <Swatch key={c} color={c} selected={skinTone === c} onPress={() => setSkinTone(c)} />
               ))}
             </View>
           </View>
-
-          {/* Hair color */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Hair Color</Text>
-            <View style={styles.dotRow}>
+        );
+      case 2:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepQuestion}>Pick your hair color ✨</Text>
+            <View style={styles.swatchGrid}>
               {HAIR_COLORS.map((c) => (
-                <ColorDot
-                  key={c}
-                  color={c}
-                  selected={hairColor === c}
-                  onPress={() => pick(setHairColor, c)}
-                />
+                <Swatch key={c} color={c} selected={hairColor === c} onPress={() => setHairColor(c)} />
               ))}
             </View>
           </View>
-
-          {/* Outfit color */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Outfit Color</Text>
-            <View style={styles.dotRow}>
+        );
+      case 3:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepQuestion}>Pick your outfit color 👗</Text>
+            <View style={styles.swatchGrid}>
               {OUTFIT_COLORS.map((c) => (
-                <ColorDot
-                  key={c}
-                  color={c}
-                  selected={outfitColor === c}
-                  onPress={() => pick(setOutfitColor, c)}
-                />
+                <Swatch key={c} color={c} selected={outfitColor === c} onPress={() => setOutfitColor(c)} />
               ))}
             </View>
           </View>
+        );
+      default:
+        return null;
+    }
+  };
 
+  const displayName = name.trim() || 'Explorer';
+  const isLastStep = step === TOTAL_STEPS - 1;
+
+  return (
+    <LinearGradient colors={['#E1F5FE', '#F3E5F5']} style={styles.container}>
+      {/* Progress dots */}
+      <View style={styles.topBar}>
+        <StepDots step={step} />
+      </View>
+
+      {/* Character preview — live-updating */}
+      <View style={styles.previewArea}>
+        <LinearGradient colors={['#B3E5FC', '#E1BEE7']} style={styles.previewCard}>
+          <Animated.View style={{ transform: [{ translateX: slideAnim }] }}>
+            <LilaCharacter
+              hairColor={hairColor}
+              skinTone={skinTone}
+              outfitColor={outfitColor}
+              equippedHat="hat-explorer"
+              size={IS_IPAD ? 200 : 150}
+            />
+          </Animated.View>
+          <Text style={styles.previewName}>{displayName}</Text>
+        </LinearGradient>
+      </View>
+
+      {/* Step content area */}
+      <Animated.View style={[styles.contentArea, { transform: [{ translateX: slideAnim }] }]}>
+        {stepContent()}
+      </Animated.View>
+
+      {/* Navigation buttons */}
+      <View style={styles.navRow}>
+        {step > 0 ? (
+          <TouchableOpacity style={styles.backBtn} onPress={() => advance(false)}>
+            <Text style={styles.backBtnText}>← Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.backBtn} />
+        )}
+
+        {isLastStep ? (
           <BigButton
-            label={`Let's Explore, ${name.trim() || 'Lila'}!`}
-            emoji="🚀"
+            label={`Let's Go, ${displayName}! 🚀`}
             onPress={handleConfirm}
             color="pink"
             size="large"
-            style={styles.confirmBtn}
+            style={styles.nextBtn}
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        ) : (
+          <BigButton
+            label="Next →"
+            onPress={() => advance(true)}
+            color="purple"
+            size="large"
+            style={styles.nextBtn}
+          />
+        )}
+      </View>
     </LinearGradient>
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const SWATCH_SIZE = IS_IPAD ? 72 : 58;
+
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scroll: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  scrollCompact: {
-    paddingTop: 36,
-    paddingBottom: 24,
-  },
-  header: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: C.UI_PRIMARY,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: C.TEXT_MID,
-    marginBottom: 24,
-    fontWeight: '600',
-  },
-  previewBox: {
-    width: width - 60,
-    borderRadius: 24,
-    overflow: 'hidden',
-    marginBottom: 28,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  previewGradient: {
-    paddingVertical: 24,
+  container: { flex: 1 },
+
+  topBar: {
+    paddingTop: 54,
+    paddingBottom: 8,
     alignItems: 'center',
   },
-  previewName: {
-    marginTop: 8,
-    fontSize: 20,
-    fontWeight: '800',
-    color: C.UI_DARK,
+
+  // Step dots
+  dots: { flexDirection: 'row', gap: 10 },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#DDD',
   },
-  section: {
-    width: '100%',
-    marginBottom: 20,
+  dotActive: {
+    backgroundColor: C.UI_PRIMARY,
+    width: 24,
+    borderRadius: 5,
   },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.TEXT_DARK,
-    marginBottom: 10,
+  dotDone: {
+    backgroundColor: C.UI_SECONDARY,
   },
-  dotRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+
+  // Character preview
+  previewArea: {
+    flex: IS_IPAD ? 2.2 : 2,
+    paddingHorizontal: 32,
+    paddingVertical: 8,
   },
-  colorDot: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 3,
-    borderColor: 'transparent',
+  previewCard: {
+    flex: 1,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  colorDotSelected: {
-    borderColor: C.UI_DARK,
-    transform: [{ scale: 1.18 }],
-  },
-  checkmark: {
-    color: 'white',
-    fontSize: 20,
+  previewName: {
+    marginTop: 8,
+    marginBottom: 12,
+    fontSize: IS_IPAD ? 26 : 22,
     fontWeight: '900',
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    color: C.UI_DARK,
+  },
+
+  // Step content
+  contentArea: {
+    flex: IS_IPAD ? 1.4 : 1.6,
+    paddingHorizontal: 28,
+    justifyContent: 'center',
+  },
+  stepContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  stepQuestion: {
+    fontSize: IS_IPAD ? 22 : 19,
+    fontWeight: '800',
+    color: C.TEXT_DARK,
+    marginBottom: IS_IPAD ? 20 : 16,
+    textAlign: 'center',
+  },
+  swatchGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: IS_IPAD ? 16 : 12,
+    justifyContent: 'center',
+  },
+  swatch: {
+    width: SWATCH_SIZE,
+    height: SWATCH_SIZE,
+    borderRadius: SWATCH_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  swatchSelected: {
+    borderColor: C.UI_DARK,
+  },
+  swatchCheck: {
+    color: 'white',
+    fontSize: IS_IPAD ? 26 : 22,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.45)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   nameInput: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    fontSize: 20,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    paddingVertical: IS_IPAD ? 18 : 16,
+    fontSize: IS_IPAD ? 26 : 22,
     fontWeight: '700',
     color: C.TEXT_DARK,
-    borderWidth: 2.5,
+    borderWidth: 3,
     borderColor: C.UI_PRIMARY,
-    width: '100%',
+    textAlign: 'center',
   },
-  confirmBtn: {
-    marginTop: 8,
-    width: '100%',
+
+  // Nav buttons
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingBottom: 36,
+    paddingTop: 8,
+    gap: 12,
+  },
+  backBtn: {
+    width: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.TEXT_MID,
+  },
+  nextBtn: {
+    flex: 1,
   },
 });
