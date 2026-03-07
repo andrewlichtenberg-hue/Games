@@ -38,6 +38,7 @@ export interface GameState {
 
   // ── Journal ──────────────────────────────────────────────────
   journalEntries: string[]; // animal ids in discovery order
+  claimedLocationBonuses: string[]; // locationIds whose completion XP was collected
 
   // ── Actions ──────────────────────────────────────────────────
   createCharacter: (
@@ -51,6 +52,7 @@ export interface GameState {
   discoverAnimal: (animalId: string) => void;
   increaseFriendship: (animalId: string) => void;
   visitLocation: (locationId: string) => void;
+  claimLocationBonus: (locationId: string, xp: number) => void;
   equipItem: (itemId: string, slot: 'hat' | 'outfit' | 'accessory') => void;
   unequipItem: (slot: 'hat' | 'outfit' | 'accessory') => void;
   unlockItem: (itemId: string) => void;
@@ -80,6 +82,7 @@ const INITIAL_STATE = {
   equippedAccessory: null,
   ownedPowerups: [],
   journalEntries: [],
+  claimedLocationBonuses: [],
 };
 
 export const useGameStore = create<GameState>()(
@@ -171,6 +174,13 @@ export const useGameStore = create<GameState>()(
         if (!ownedItems.includes(itemId)) {
           set({ ownedItems: [...ownedItems, itemId] });
         }
+      },
+
+      claimLocationBonus: (locationId, xp) => {
+        const { claimedLocationBonuses } = get();
+        if (claimedLocationBonuses.includes(locationId)) return;
+        set({ claimedLocationBonuses: [...claimedLocationBonuses, locationId] });
+        get().gainXP(xp);
       },
 
       resetGame: () => set({ ...INITIAL_STATE }),

@@ -7,7 +7,6 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -17,19 +16,23 @@ import { SceneBackground } from '../components/SceneBackground';
 import { LilaCharacter } from '../components/LilaCharacter';
 import { AnimalSprite } from '../components/AnimalSprite';
 import { SpeechBubble } from '../components/SpeechBubble';
+import { PuzzleModal } from '../components/PuzzleModal';
 import { XPBar } from '../components/XPBar';
 import { BigButton } from '../components/ui/BigButton';
 import { C } from '../utils/colors';
 import { getLocationById } from '../game/locations';
 import { getAnimalsForLocation, Animal } from '../game/animals';
+import { getRandomPuzzle } from '../game/puzzles';
+import { MAX_FRIENDSHIP } from '../game/progression';
 import { useGameStore } from '../store/gameStore';
 import { audioManager } from '../audio/audioManager';
 import type { RootStackParamList } from '../../App';
+import type { Puzzle } from '../game/puzzles';
 
 const { width, height } = Dimensions.get('window');
-const SCENE_H = 280;
+const SCENE_H = Math.min(280, height * 0.36);
 const LILA_SIZE = 100;
-const GROUND_Y = SCENE_H * 0.62; // matches SceneBackground
+const GROUND_Y = SCENE_H * 0.62;
 const LILA_Y = GROUND_Y - LILA_SIZE + 10;
 
 type Props = {
@@ -61,23 +64,34 @@ export function ExplorationScreen({ route, navigation }: Props) {
 
   const {
     hairColor, skinTone, outfitColor, equippedHat,
-    level, xp, discoveredAnimals, animalFriendship,
+    level, xp, discoveredAnimals, animalFriendship, companionAnimals,
     gainXP, discoverAnimal, increaseFriendship, visitLocation,
   } = useGameStore();
 
-  // Lila position
+  // Lila movement
   const lilaX = useRef(new Animated.Value(width * 0.15)).current;
   const [lilaFacing, setLilaFacing] = useState<'left' | 'right'>('right');
   const [lilaCurrentX, setLilaCurrentX] = useState(width * 0.15);
 
-  // Spawned animals
+  // Animals
   const [spawnedAnimals, setSpawnedAnimals] = useState<SpawnedAnimal[]>(() =>
     spawnAnimals(locationAnimals, width)
   );
 
-  // Selected animal dialog
+  // Speech bubble
   const [selectedAnimal, setSelectedAnimal] = useState<SpawnedAnimal | null>(null);
   const bubbleOpacity = useRef(new Animated.Value(0)).current;
+
+  // Puzzle
+  const [activePuzzle, setActivePuzzle] = useState<{
+    animal: Animal;
+    puzzle: Puzzle;
+    bonusXP: number;
+  } | null>(null);
+
+  // New companion toast
+  const [newCompanionName, setNewCompanionName] = useState<string | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
 
   // Session stats
   const [sessionFinds, setSessionFinds] = useState(0);
@@ -105,17 +119,43 @@ export function ExplorationScreen({ route, navigation }: Props) {
     );
   }
 
+  // ── Companion toast ────────────────────────────────────────────
+
+  const showCompanionToast = (animalName: string) => {
+    setNewCompanionName(animalName);
+    toastAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(toastAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(toastAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
+    ]).start(() => setNewCompanionName(null));
+  };
+
+  // ── Check if animal becomes companion after friendship increase ──
+
+  const tryIncreaseFriendship = (animal: Animal, extraBoost = false) => {
+    const current = animalFriendship[animal.id] ?? 0;
+    const alreadyCompanion = companionAnimals.includes(animal.id);
+    increaseFriendship(animal.id);
+    if (extraBoost) increaseFriendship(animal.id);
+    const newLevel = Math.min(current + (extraBoost ? 2 : 1), MAX_FRIENDSHIP);
+    if (newLevel >= MAX_FRIENDSHIP && !alreadyCompanion) {
+      setTimeout(() => {
+        showCompanionToast(animal.name.split(' ')[0]);
+        audioManager.playSfx('friendship');
+      }, 400);
+    }
+  };
+
+  // ── Scene / character movement ─────────────────────────────────
+
   const handleScenePress = (evt: any) => {
-    if (selectedAnimal) return; // don't move while dialog open
+    if (selectedAnimal || activePuzzle) return;
     const tapX = evt.nativeEvent.locationX;
-    const currentX = lilaCurrentX;
-
-    setLilaFacing(tapX > currentX ? 'right' : 'left');
+    setLilaFacing(tapX > lilaCurrentX ? 'right' : 'left');
     setLilaCurrentX(tapX - LILA_SIZE / 2);
-
     Haptics.impact();
     audioManager.playSfx('walk');
-
     Animated.spring(lilaX, {
       toValue: tapX - LILA_SIZE / 2,
       useNativeDriver: true,
@@ -124,12 +164,13 @@ export function ExplorationScreen({ route, navigation }: Props) {
     }).start();
   };
 
+  // ── Animal tap ─────────────────────────────────────────────────
+
   const handleAnimalPress = (spawned: SpawnedAnimal) => {
-    if (selectedAnimal) return;
+    if (selectedAnimal || activePuzzle) return;
     Haptics.impact();
     audioManager.playSfx('discover');
 
-    // Bounce the animal
     Animated.sequence([
       Animated.timing(spawned.bounceAnim, { toValue: -16, duration: 150, useNativeDriver: true }),
       Animated.spring(spawned.bounceAnim, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 12 }),
@@ -140,33 +181,55 @@ export function ExplorationScreen({ route, navigation }: Props) {
     Animated.timing(bubbleOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
   };
 
+  // ── Say Hi (base XP + friendship, then puzzle) ─────────────────
+
   const handleSayHi = () => {
     if (!selectedAnimal) return;
     const { animal } = selectedAnimal;
     const isNew = !discoveredAnimals.includes(animal.id);
-    const xpAmount = animal.xpReward;
 
-    gainXP(xpAmount);
+    gainXP(animal.xpReward);
     discoverAnimal(animal.id);
-    increaseFriendship(animal.id);
+    tryIncreaseFriendship(animal);
 
-    setXpGained((prev) => prev + xpAmount);
-    if (isNew) setSessionFinds((prev) => prev + 1);
+    setXpGained((prev) => prev + animal.xpReward);
+    const newFinds = sessionFinds + (isNew ? 1 : 0);
+    if (isNew) setSessionFinds(newFinds);
 
     Haptics.notification();
     audioManager.playSfx('success');
 
-    // Mark as found and close bubble
     setSpawnedAnimals((prev) =>
       prev.map((s) => s.animal.id === animal.id ? { ...s, found: true } : s)
     );
     closeBubble();
 
-    // After 3 finds, suggest going home
-    if (sessionFinds + (isNew ? 1 : 0) >= 3) {
-      setTimeout(() => setShowSessionEnd(true), 800);
+    // Offer a puzzle after a short pause
+    const puzzleData = getRandomPuzzle(animal.id);
+    if (puzzleData) {
+      setTimeout(() => setActivePuzzle({ animal, ...puzzleData }), 350);
+    } else {
+      if (newFinds >= 3) setTimeout(() => setShowSessionEnd(true), 800);
     }
   };
+
+  // ── Puzzle callbacks ───────────────────────────────────────────
+
+  const handlePuzzleCorrect = (bonusXP: number) => {
+    if (!activePuzzle) return;
+    gainXP(bonusXP);
+    tryIncreaseFriendship(activePuzzle.animal, true); // extra friendship boost
+    setXpGained((prev) => prev + bonusXP);
+    setActivePuzzle(null);
+    if (sessionFinds >= 3) setTimeout(() => setShowSessionEnd(true), 600);
+  };
+
+  const handlePuzzleDismiss = () => {
+    setActivePuzzle(null);
+    if (sessionFinds >= 3) setTimeout(() => setShowSessionEnd(true), 600);
+  };
+
+  // ── Bubble close ───────────────────────────────────────────────
 
   const closeBubble = () => {
     Animated.timing(bubbleOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
@@ -179,6 +242,8 @@ export function ExplorationScreen({ route, navigation }: Props) {
         Math.floor(Math.random() * selectedAnimal.animal.greetings.length)
       ]
     : '';
+
+  // ── Render ─────────────────────────────────────────────────────
 
   return (
     <View style={styles.container}>
@@ -215,7 +280,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
           />
 
           {/* Animals */}
-          {spawnedAnimals.map((spawned, i) => {
+          {spawnedAnimals.map((spawned) => {
             const friendship = animalFriendship[spawned.animal.id] ?? 0;
             const isDiscovered = discoveredAnimals.includes(spawned.animal.id);
             return (
@@ -241,13 +306,21 @@ export function ExplorationScreen({ route, navigation }: Props) {
                     bodyColor={spawned.animal.bodyColor}
                     accentColor={spawned.animal.accentColor}
                   />
-                  {spawned.found && (
-                    <Text style={styles.heartBadge}>❤️</Text>
-                  )}
+                  {spawned.found && <Text style={styles.heartBadge}>❤️</Text>}
                   {spawned.animal.rarity === 'legendary' && !isDiscovered && (
                     <Text style={styles.rareBadge}>✨</Text>
                   )}
                 </TouchableOpacity>
+                {/* Friendship hearts below animal */}
+                {isDiscovered && (
+                  <View style={styles.miniHearts}>
+                    {Array.from({ length: MAX_FRIENDSHIP }, (_, i) => (
+                      <Text key={i} style={styles.miniHeart}>
+                        {i < friendship ? '❤️' : '🤍'}
+                      </Text>
+                    ))}
+                  </View>
+                )}
                 <Text style={styles.animalNameLabel}>
                   {isDiscovered ? spawned.animal.name.split(' ')[0] : '???'}
                 </Text>
@@ -292,8 +365,8 @@ export function ExplorationScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Info panel: location description + animal hints */}
-      {!selectedAnimal && !showSessionEnd && (
+      {/* Info panel */}
+      {!selectedAnimal && !showSessionEnd && !activePuzzle && (
         <View style={styles.infoPanel}>
           <Text style={styles.infoPanelTitle}>{location.name}</Text>
           <Text style={styles.infoPanelDesc}>{location.description}</Text>
@@ -301,8 +374,8 @@ export function ExplorationScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {/* Session end suggestion */}
-      {showSessionEnd && !selectedAnimal && (
+      {/* Session end */}
+      {showSessionEnd && !selectedAnimal && !activePuzzle && (
         <View style={styles.sessionEnd}>
           <Text style={styles.sessionEndTitle}>Amazing exploring! 🎉</Text>
           <Text style={styles.sessionEndText}>
@@ -326,6 +399,36 @@ export function ExplorationScreen({ route, navigation }: Props) {
             />
           </View>
         </View>
+      )}
+
+      {/* New companion toast */}
+      {newCompanionName && (
+        <Animated.View
+          style={[
+            styles.companionToast,
+            {
+              opacity: toastAnim,
+              transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+            },
+          ]}
+        >
+          <Text style={styles.companionToastText}>
+            🏠 {newCompanionName} is now your companion!
+          </Text>
+        </Animated.View>
+      )}
+
+      {/* Puzzle modal */}
+      {activePuzzle && (
+        <PuzzleModal
+          visible
+          animalName={activePuzzle.animal.name}
+          animalEmoji={activePuzzle.animal.emoji}
+          puzzle={activePuzzle.puzzle}
+          bonusXP={activePuzzle.bonusXP}
+          onCorrect={handlePuzzleCorrect}
+          onDismiss={handlePuzzleDismiss}
+        />
       )}
     </View>
   );
@@ -369,12 +472,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
   },
+  miniHearts: {
+    flexDirection: 'row',
+    marginBottom: 1,
+  },
+  miniHeart: {
+    fontSize: 7,
+  },
   animalNameLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: C.TEXT_DARK,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 1,
     backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: 8,
     paddingHorizontal: 6,
@@ -453,5 +563,25 @@ const styles = StyleSheet.create({
   sessionEndButtons: {
     flexDirection: 'row',
     width: '100%',
+  },
+  companionToast: {
+    position: 'absolute',
+    top: 110,
+    alignSelf: 'center',
+    backgroundColor: '#FFF9C4',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderWidth: 2,
+    borderColor: C.UI_GOLD,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  companionToastText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: C.TEXT_DARK,
   },
 });

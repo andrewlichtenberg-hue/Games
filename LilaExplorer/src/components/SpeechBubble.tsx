@@ -22,7 +22,7 @@ export function SpeechBubble({
   onClose,
   opacity,
 }: SpeechBubbleProps) {
-  const hearts = Array.from({ length: 5 }, (_, i) => i < friendshipLevel ? '❤️' : '🤍');
+  const hearts = Array.from({ length: 3 }, (_, i) => i < Math.min(friendshipLevel, 3) ? '❤️' : '🤍');
 
   const inner = (
     <View style={styles.bubble}>
