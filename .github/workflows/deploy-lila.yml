@@ -37,6 +37,9 @@ jobs:
         run: EXPO_NO_TELEMETRY=1 npx expo export --platform web
         working-directory: LilaExplorer
 
+      - name: Fix script tag for ES module compatibility
+        run: sed -i 's/ defer><\/script>/ type="module"><\/script>/' LilaExplorer/dist/index.html
+
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
