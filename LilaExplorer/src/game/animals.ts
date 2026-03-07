@@ -1,0 +1,331 @@
+export type AnimalRarity = 'common' | 'rare' | 'legendary';
+export type AnimalType =
+  | 'squirrel' | 'pigeon' | 'dog' | 'robin'
+  | 'cat' | 'raccoon' | 'sparrow'
+  | 'rabbit' | 'turtle' | 'hawk'
+  | 'seagull' | 'sandpiper' | 'beachcat'
+  | 'chipmunk' | 'deer'
+  | 'fox' | 'beaver' | 'heron'
+  | 'groundhog' | 'bear' | 'owl'
+  | 'moose' | 'firefly' | 'otter'
+  | 'seal' | 'plover' | 'coyote'
+  | 'porcupine' | 'falcon' | 'lynx';
+
+export interface Animal {
+  id: string;
+  name: string;
+  type: AnimalType;
+  emoji: string;
+  rarity: AnimalRarity;
+  locationIds: string[];
+  funFact: string;
+  greetings: string[];
+  bodyColor: string;
+  accentColor: string;
+  xpReward: number;
+  friendshipLines: string[]; // what they say when you increase friendship
+}
+
+export const ANIMALS: Animal[] = [
+  // ── Prospect Park, Brooklyn ──────────────────────────────────────
+  {
+    id: 'squirrel',
+    name: 'Sammy the Squirrel',
+    type: 'squirrel',
+    emoji: '🐿️',
+    rarity: 'common',
+    locationIds: ['prospect-park'],
+    funFact: 'Squirrels plant thousands of trees every year by forgetting where they buried their acorns!',
+    greetings: ['Chitter chitter! Got any acorns?', 'Ooh, a visitor! Hello!'],
+    bodyColor: '#8B5E3C',
+    accentColor: '#D4A464',
+    xpReward: 10,
+    friendshipLines: ['You remembered me!', 'Best friends share acorns!'],
+  },
+  {
+    id: 'pigeon',
+    name: 'Pearl the Pigeon',
+    type: 'pigeon',
+    emoji: '🕊️',
+    rarity: 'common',
+    locationIds: ['prospect-park', 'brooklyn-heights'],
+    funFact: 'Pigeons can find their way home from over 1,000 miles away. They have built-in GPS!',
+    greetings: ['Coo coo! Welcome to Brooklyn!', 'Coo! I love visitors!'],
+    bodyColor: '#9E9E9E',
+    accentColor: '#7B68EE',
+    xpReward: 8,
+    friendshipLines: ["Coo coo! My bestie!", "I'll show you all my favorite spots!"],
+  },
+  {
+    id: 'dog',
+    name: 'Biscuit the Dog',
+    type: 'dog',
+    emoji: '🐕',
+    rarity: 'common',
+    locationIds: ['prospect-park'],
+    funFact: 'Dogs can smell up to 100,000 times better than humans — they could find a lost sock in a whole city!',
+    greetings: ['WOOF! WOOF! I LOVE YOU!', 'Play with me? PLEASE?'],
+    bodyColor: '#C8A96E',
+    accentColor: '#F5DEB3',
+    xpReward: 15,
+    friendshipLines: ['Best friend forever! WOOF!', 'You\'re my favorite person!'],
+  },
+  {
+    id: 'robin',
+    name: 'Rosa the Robin',
+    type: 'robin',
+    emoji: '🐦',
+    rarity: 'common',
+    locationIds: ['prospect-park'],
+    funFact: 'A robin\'s red chest is how it tells other robins "this is my tree!" It\'s like wearing a bright shirt.',
+    greetings: ['Tweet tweet! Beautiful day!', 'I just got back from the south!'],
+    bodyColor: '#5B3E2B',
+    accentColor: '#E07B39',
+    xpReward: 10,
+    friendshipLines: ['I\'ll sing just for you!', 'You\'re as sweet as a worm… I mean, berries!'],
+  },
+
+  // ── Brooklyn Heights / DUMBO ─────────────────────────────────────
+  {
+    id: 'cat',
+    name: 'Cleo the Cat',
+    type: 'cat',
+    emoji: '🐈',
+    rarity: 'rare',
+    locationIds: ['brooklyn-heights'],
+    funFact: 'Cats can jump up to six times their own height — that would be like you jumping to the top of a house!',
+    greetings: ['Mrrrow… I suppose you can approach.', '*blinks slowly* This means I trust you.'],
+    bodyColor: '#E8D5B7',
+    accentColor: '#B8860B',
+    xpReward: 20,
+    friendshipLines: ['I\'ve decided you\'re acceptable.', '...You may pet me. Just this once.'],
+  },
+  {
+    id: 'raccoon',
+    name: 'Remy the Raccoon',
+    type: 'raccoon',
+    emoji: '🦝',
+    rarity: 'rare',
+    locationIds: ['brooklyn-heights'],
+    funFact: 'Raccoons wash their food before eating it, just like you wash your hands before dinner!',
+    greetings: ['*rustles in trash* Oh! Hi there!', 'Shhh, I\'m being sneaky!'],
+    bodyColor: '#696969',
+    accentColor: '#2C2C2C',
+    xpReward: 20,
+    friendshipLines: ['I saved you some pizza!', 'You\'re the best sneaky partner!'],
+  },
+  {
+    id: 'sparrow',
+    name: 'Sunny the Sparrow',
+    type: 'sparrow',
+    emoji: '🐦',
+    rarity: 'common',
+    locationIds: ['brooklyn-heights'],
+    funFact: 'Sparrows take "dust baths" — they roll in dirt to keep their feathers clean and bug-free!',
+    greetings: ['Cheep cheep! Hello hello!', 'I can show you the best crumbs!'],
+    bodyColor: '#A0826D',
+    accentColor: '#E8C99A',
+    xpReward: 8,
+    friendshipLines: ['Cheep cheep cheep! (That means best friends!)'],
+  },
+
+  // ── Central Park, Manhattan ───────────────────────────────────────
+  {
+    id: 'rabbit',
+    name: 'Rosie the Rabbit',
+    type: 'rabbit',
+    emoji: '🐇',
+    rarity: 'rare',
+    locationIds: ['central-park'],
+    funFact: 'Rabbits can\'t be sick to their stomachs — so they\'re very careful to only eat safe plants. Smart!',
+    greetings: ['*twitches nose* Ooh, someone new!', 'Hop hop! Nice to meet you!'],
+    bodyColor: '#E8D5B7',
+    accentColor: '#FFB6C1',
+    xpReward: 25,
+    friendshipLines: ['I\'ll share my clover patch!', 'Best friends hop together!'],
+  },
+  {
+    id: 'turtle',
+    name: 'Theo the Turtle',
+    type: 'turtle',
+    emoji: '🐢',
+    rarity: 'rare',
+    locationIds: ['central-park'],
+    funFact: 'Turtles have been on Earth for over 200 million years — they lived alongside dinosaurs!',
+    greetings: ['…Hello there. I\'m Theo.', 'Take your time. I\'ll be here.'],
+    bodyColor: '#4CAF50',
+    accentColor: '#2E7D32',
+    xpReward: 25,
+    friendshipLines: ['Slow and steady wins the friendship.', 'I\'ve saved you a warm sunny rock.'],
+  },
+  {
+    id: 'hawk',
+    name: 'Hunter the Red-tailed Hawk',
+    type: 'hawk',
+    emoji: '🦅',
+    rarity: 'legendary',
+    locationIds: ['central-park'],
+    funFact: 'Red-tailed hawks can spot a mouse from 100 feet in the air! Their eyes are 8 times sharper than yours.',
+    greetings: ['SCREEEE! A brave explorer approaches.', 'I\'ve been watching you from way up high.'],
+    bodyColor: '#8B4513',
+    accentColor: '#CD853F',
+    xpReward: 50,
+    friendshipLines: ['You are worthy of the skies!', 'I will keep watch over you, little explorer.'],
+  },
+
+  // ── Rockaway Beach ───────────────────────────────────────────────
+  {
+    id: 'seagull',
+    name: 'Gully the Seagull',
+    type: 'seagull',
+    emoji: '🦢',
+    rarity: 'common',
+    locationIds: ['rockaway-beach'],
+    funFact: 'Seagulls are so smart they do a funny rain dance to trick worms into coming out of the ground!',
+    greetings: ['SQUAWK! Is that a snack?', 'I LOVE the beach! Don\'t you?'],
+    bodyColor: '#F5F5F5',
+    accentColor: '#E0E0E0',
+    xpReward: 12,
+    friendshipLines: ['You\'re my favorite snack-sharer!', 'SQUAWK means I love you!'],
+  },
+  {
+    id: 'beachcat',
+    name: 'Sandy the Beach Cat',
+    type: 'beachcat',
+    emoji: '🐱',
+    rarity: 'rare',
+    locationIds: ['rockaway-beach'],
+    funFact: 'Some cats love water! Wild cats like fishing cats are great swimmers and even dive for fish.',
+    greetings: ['Mew! The salt breeze suits me.', 'I nap under the boardwalk. Wanna join?'],
+    bodyColor: '#E8C090',
+    accentColor: '#A0522D',
+    xpReward: 22,
+    friendshipLines: ['You found my secret beach spot!', 'Purrrr… sunbeams and friends!'],
+  },
+
+  // ── Staten Island Greenbelt ───────────────────────────────────────
+  {
+    id: 'chipmunk',
+    name: 'Chester the Chipmunk',
+    type: 'chipmunk',
+    emoji: '🐿️',
+    rarity: 'common',
+    locationIds: ['staten-island'],
+    funFact: 'Chipmunks can carry as many as 165 acorns at a time in their stretchy cheek pouches!',
+    greetings: ['Chip chip! I\'m storing for winter!', 'Look at my cheeks! So full!'],
+    bodyColor: '#C17817',
+    accentColor: '#F5DEB3',
+    xpReward: 15,
+    friendshipLines: ['I saved you some seeds!', 'Chip chip hooray for friends!'],
+  },
+  {
+    id: 'deer',
+    name: 'Daisy the White-tailed Deer',
+    type: 'deer',
+    emoji: '🦌',
+    rarity: 'rare',
+    locationIds: ['staten-island'],
+    funFact: 'Baby deer are called fawns, and their spots help them hide in dappled forest sunlight!',
+    greetings: ['*gentle sniff* Hello, kind explorer.', 'I move so quietly even the birds don\'t hear me.'],
+    bodyColor: '#C8854A',
+    accentColor: '#F5DEB3',
+    xpReward: 30,
+    friendshipLines: ['I\'ll share my quiet meadow.', 'You have the gentlest footsteps.'],
+  },
+
+  // ── Hudson Valley ────────────────────────────────────────────────
+  {
+    id: 'fox',
+    name: 'Fern the Fox',
+    type: 'fox',
+    emoji: '🦊',
+    rarity: 'rare',
+    locationIds: ['hudson-valley'],
+    funFact: 'Foxes use the Earth\'s magnetic field like a compass to help them pounce on mice buried under snow!',
+    greetings: ['Oh! You\'re clever enough to find me!', 'I was watching from the bushes.'],
+    bodyColor: '#E07B39',
+    accentColor: '#FFFFFF',
+    xpReward: 35,
+    friendshipLines: ['You\'re almost as clever as me!', 'Friends share their berry patches!'],
+  },
+  {
+    id: 'beaver',
+    name: 'Bruno the Beaver',
+    type: 'beaver',
+    emoji: '🦫',
+    rarity: 'rare',
+    locationIds: ['hudson-valley'],
+    funFact: 'Beavers are nature\'s engineers! Their dams create ponds that give homes to hundreds of other animals.',
+    greetings: ['I\'m building a dam! Wanna help?', '*slaps tail* Oh! Hello there!'],
+    bodyColor: '#8B5E3C',
+    accentColor: '#5C4033',
+    xpReward: 30,
+    friendshipLines: ['You can live in my pond anytime!', 'I\'ll build you a little bridge!'],
+  },
+
+  // ── Catskill Mountains ───────────────────────────────────────────
+  {
+    id: 'bear',
+    name: 'Bernadette the Black Bear',
+    type: 'bear',
+    emoji: '🐻',
+    rarity: 'legendary',
+    locationIds: ['catskills'],
+    funFact: 'Black bears are not really black — they come in brown, cinnamon, and even blonde colors! They\'re also amazing swimmers.',
+    greetings: ['ROAR! ...Just kidding. Hi there! I\'m gentle!', '*sniffs air* You smell like adventure!'],
+    bodyColor: '#2C2C2C',
+    accentColor: '#5C4033',
+    xpReward: 60,
+    friendshipLines: ['I give the BEST bear hugs!', 'Come find berries with me!'],
+  },
+  {
+    id: 'owl',
+    name: 'Ophelia the Barred Owl',
+    type: 'owl',
+    emoji: '🦉',
+    rarity: 'legendary',
+    locationIds: ['catskills'],
+    funFact: 'Owls can turn their heads almost all the way around — 270 degrees! That\'s like looking behind you without moving your body.',
+    greetings: ['Who cooks for you? WHO COOKS FOR YOU?', 'Hoo hoo… a night-time explorer!'],
+    bodyColor: '#8B7355',
+    accentColor: '#D2B48C',
+    xpReward: 55,
+    friendshipLines: ['Wisdom and friendship go together.', 'I\'ll keep watch while you sleep, little explorer.'],
+  },
+
+  // ── Adirondacks ──────────────────────────────────────────────────
+  {
+    id: 'otter',
+    name: 'Ollie the River Otter',
+    type: 'otter',
+    emoji: '🦦',
+    rarity: 'rare',
+    locationIds: ['adirondacks'],
+    funFact: 'Otters hold hands while they sleep in the water so they don\'t drift away from each other. How sweet!',
+    greetings: ['Wheee! Slide with me!', 'I can show you my favorite river slide!'],
+    bodyColor: '#6B4F3A',
+    accentColor: '#D2B48C',
+    xpReward: 40,
+    friendshipLines: ['Hold my paw? otter-ly delighted!', 'Best slidemates forever!'],
+  },
+  {
+    id: 'moose',
+    name: 'Magnus the Moose',
+    type: 'moose',
+    emoji: '🫎',
+    rarity: 'legendary',
+    locationIds: ['adirondacks'],
+    funFact: 'Moose can dive 20 feet underwater to eat plants off the lake bottom, and they can swim for miles!',
+    greetings: ['*gentle honk* Well, hello little one.', 'I don\'t see many explorers up this far north!'],
+    bodyColor: '#5C4033',
+    accentColor: '#3E2723',
+    xpReward: 65,
+    friendshipLines: ['I shall carry you over the mountains!', 'You are the bravest explorer I\'ve met.'],
+  },
+];
+
+export const getAnimalById = (id: string): Animal | undefined =>
+  ANIMALS.find((a) => a.id === id);
+
+export const getAnimalsForLocation = (locationId: string): Animal[] =>
+  ANIMALS.filter((a) => a.locationIds.includes(locationId));

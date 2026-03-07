@@ -1,0 +1,384 @@
+import React, { useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  TouchableOpacity,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { LilaCharacter } from '../components/LilaCharacter';
+import { AnimalSprite } from '../components/AnimalSprite';
+import { XPBar } from '../components/XPBar';
+import { LevelUpModal } from '../components/LevelUpModal';
+import { BigButton } from '../components/ui/BigButton';
+import { C } from '../utils/colors';
+import { useGameStore } from '../store/gameStore';
+import { getAnimalById } from '../game/animals';
+import { audioManager } from '../audio/audioManager';
+import type { RootStackParamList } from '../../App';
+
+const { width } = Dimensions.get('window');
+
+type Props = { navigation: StackNavigationProp<RootStackParamList, 'Home'> };
+
+function NavCard({
+  emoji,
+  label,
+  sublabel,
+  color,
+  onPress,
+}: {
+  emoji: string;
+  label: string;
+  sublabel: string;
+  color: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
+      style={[styles.navCard, { borderColor: color }]}
+      activeOpacity={0.82}
+    >
+      <Text style={styles.navEmoji}>{emoji}</Text>
+      <Text style={[styles.navLabel, { color }]}>{label}</Text>
+      <Text style={styles.navSublabel}>{sublabel}</Text>
+    </TouchableOpacity>
+  );
+}
+
+export function HomeScreen({ navigation }: Props) {
+  const {
+    playerName,
+    hairColor,
+    skinTone,
+    outfitColor,
+    level,
+    xp,
+    equippedHat,
+    companionAnimals,
+    discoveredAnimals,
+    pendingLevelUp,
+    clearPendingLevelUp,
+  } = useGameStore();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      audioManager.playMusic('theme');
+    }, [])
+  );
+
+  const visibleCompanions = companionAnimals.slice(0, 4);
+
+  return (
+    <>
+      <LinearGradient colors={['#E8F5E9', '#FFF9C4', '#FFF3E0']} style={styles.flex}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <LinearGradient
+            colors={['#6C5CE7', '#A29BFE']}
+            style={styles.header}
+          >
+            <View style={styles.headerTop}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.greeting}>Hi, {playerName}! 👋</Text>
+                <Text style={styles.headerSub}>Ready to explore today?</Text>
+              </View>
+              {/* Mini character */}
+              <LilaCharacter
+                hairColor={hairColor}
+                skinTone={skinTone}
+                outfitColor={outfitColor}
+                equippedHat={equippedHat}
+                size={80}
+              />
+            </View>
+            <View style={styles.xpContainer}>
+              <XPBar xp={xp} level={level} />
+            </View>
+          </LinearGradient>
+
+          {/* Companion room */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🏡 Lila's Room</Text>
+            <View style={styles.room}>
+              <LinearGradient
+                colors={['#FFF3E0', '#FFF9C4']}
+                style={styles.roomGradient}
+              >
+                {/* Floor */}
+                <View style={styles.roomFloor} />
+                {/* Lila standing in room */}
+                <View style={styles.lilaInRoom}>
+                  <LilaCharacter
+                    hairColor={hairColor}
+                    skinTone={skinTone}
+                    outfitColor={outfitColor}
+                    equippedHat={equippedHat}
+                    size={100}
+                  />
+                </View>
+                {/* Companion animals */}
+                {visibleCompanions.length > 0 ? (
+                  <View style={styles.companions}>
+                    {visibleCompanions.map((id, i) => {
+                      const animal = getAnimalById(id);
+                      if (!animal) return null;
+                      return (
+                        <View key={id} style={[styles.companionItem, { left: 20 + i * 68 }]}>
+                          <AnimalSprite type={animal.type} size={54} bodyColor={animal.bodyColor} accentColor={animal.accentColor} />
+                          <Text style={styles.companionName}>{animal.name.split(' ')[0]}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.noCompanions}>
+                    Go explore to find animal friends! 🌿
+                  </Text>
+                )}
+              </LinearGradient>
+            </View>
+          </View>
+
+          {/* Stats strip */}
+          <View style={styles.statsRow}>
+            <View style={styles.statChip}>
+              <Text style={styles.statNum}>{discoveredAnimals.length}</Text>
+              <Text style={styles.statLabel}>Animals Found</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statChip}>
+              <Text style={styles.statNum}>{companionAnimals.length}</Text>
+              <Text style={styles.statLabel}>Companions</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statChip}>
+              <Text style={styles.statNum}>{level}</Text>
+              <Text style={styles.statLabel}>Level</Text>
+            </View>
+          </View>
+
+          {/* Main nav */}
+          <View style={styles.navGrid}>
+            <NavCard
+              emoji="🗺️"
+              label="Explore!"
+              sublabel="Find new places & animals"
+              color="#6C5CE7"
+              onPress={() => navigation.navigate('WorldMap')}
+            />
+            <NavCard
+              emoji="📓"
+              label="Journal"
+              sublabel={`${discoveredAnimals.length} animals discovered`}
+              color="#00B894"
+              onPress={() => navigation.navigate('Journal')}
+            />
+            <NavCard
+              emoji="👗"
+              label="Wardrobe"
+              sublabel="Dress up your explorer"
+              color="#E17055"
+              onPress={() => navigation.navigate('Wardrobe')}
+            />
+          </View>
+
+          {/* Big explore button */}
+          <BigButton
+            label="Go on an Adventure!"
+            emoji="🌿"
+            onPress={() => navigation.navigate('WorldMap')}
+            color="purple"
+            size="large"
+            style={styles.bigExplore}
+          />
+        </ScrollView>
+      </LinearGradient>
+
+      {/* Level-up modal */}
+      <LevelUpModal
+        visible={pendingLevelUp !== null}
+        level={pendingLevelUp ?? 1}
+        onClose={() => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          clearPendingLevelUp();
+        }}
+      />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  scroll: { paddingBottom: 40 },
+  header: {
+    paddingTop: 56,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  greeting: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: 'white',
+  },
+  headerSub: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  xpContainer: {
+    marginTop: 4,
+  },
+  section: {
+    marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.TEXT_DARK,
+    marginBottom: 10,
+  },
+  room: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 180,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  roomGradient: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  roomFloor: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 30,
+    backgroundColor: '#D4B483',
+    borderTopWidth: 3,
+    borderTopColor: '#B8935A',
+  },
+  lilaInRoom: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+  },
+  companions: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    flexDirection: 'row',
+  },
+  companionItem: {
+    position: 'absolute',
+    alignItems: 'center',
+    bottom: 0,
+  },
+  companionName: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: C.TEXT_MID,
+    marginTop: 2,
+  },
+  noCompanions: {
+    position: 'absolute',
+    bottom: 50,
+    left: 20,
+    fontSize: 13,
+    color: C.TEXT_MID,
+    fontStyle: 'italic',
+    maxWidth: 180,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  statChip: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNum: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: C.UI_PRIMARY,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: C.TEXT_MID,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: '#EEE',
+    marginVertical: 4,
+  },
+  navGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    gap: 10,
+    marginTop: 16,
+  },
+  navCard: {
+    flex: 1,
+    minWidth: (width - 52) / 3,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 2.5,
+    shadowColor: '#000',
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  navEmoji: {
+    fontSize: 30,
+    marginBottom: 6,
+  },
+  navLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  navSublabel: {
+    fontSize: 10,
+    color: C.TEXT_LIGHT,
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  bigExplore: {
+    marginHorizontal: 16,
+    marginTop: 16,
+  },
+});

@@ -1,0 +1,101 @@
+// Lila Explorer – color palette
+export const C = {
+  // Sky & nature
+  SKY_TOP: '#87CEEB',
+  SKY_MID: '#B3E5FC',
+  SKY_BOTTOM: '#E1F5FE',
+  GRASS: '#5CB85C',
+  GRASS_DARK: '#3D8B3D',
+  GROUND: '#C8A96E',
+  WATER: '#4FC3F7',
+  SAND: '#F5DEB3',
+  MOUNTAIN: '#9E9E9E',
+  FOREST_DARK: '#2E7D32',
+  FOREST_MID: '#43A047',
+
+  // Character skin tones
+  SKIN_LIGHT: '#FFE0BD',
+  SKIN_MEDIUM: '#F1C27D',
+  SKIN_TAN: '#E0AC69',
+  SKIN_BROWN: '#C68642',
+  SKIN_DARK: '#8D5524',
+
+  // Hair colors
+  HAIR_BLONDE: '#F4D03F',
+  HAIR_AUBURN: '#C0392B',
+  HAIR_BROWN: '#7D4E1B',
+  HAIR_BLACK: '#1A1A1A',
+  HAIR_RED: '#E74C3C',
+  HAIR_PINK: '#FF69B4',
+  HAIR_PURPLE: '#9B59B6',
+
+  // Outfit colors
+  OUTFIT_PINK: '#FF6B9D',
+  OUTFIT_PURPLE: '#9B59B6',
+  OUTFIT_BLUE: '#3498DB',
+  OUTFIT_GREEN: '#27AE60',
+  OUTFIT_ORANGE: '#E67E22',
+  OUTFIT_YELLOW: '#F1C40F',
+  OUTFIT_RED: '#E74C3C',
+  OUTFIT_TEAL: '#1ABC9C',
+
+  // UI
+  UI_PRIMARY: '#FF6B9D',
+  UI_SECONDARY: '#A29BFE',
+  UI_ACCENT: '#FD79A8',
+  UI_GOLD: '#F9CA24',
+  UI_DARK: '#2D3436',
+  UI_LIGHT: '#FDFDFF',
+  UI_PANEL: 'rgba(255,255,255,0.92)',
+  UI_SHADOW: 'rgba(0,0,0,0.15)',
+
+  // Level/XP bar
+  XP_BG: '#DDD',
+  XP_FILL: '#6C5CE7',
+  XP_SHINE: '#A29BFE',
+
+  // Text
+  TEXT_DARK: '#2D3436',
+  TEXT_MID: '#636E72',
+  TEXT_LIGHT: '#B2BEC3',
+  TEXT_WHITE: '#FFFFFF',
+
+  // Buttons
+  BTN_PINK: '#FF6B9D',
+  BTN_PURPLE: '#6C5CE7',
+  BTN_GREEN: '#00B894',
+  BTN_ORANGE: '#E17055',
+  BTN_SHADOW_PINK: '#D63B6E',
+  BTN_SHADOW_PURPLE: '#4A3A9E',
+  BTN_SHADOW_GREEN: '#007A63',
+  BTN_SHADOW_ORANGE: '#B85A3E',
+};
+
+// Preset skin/hair/outfit combos for character creation
+export const SKIN_TONES = [
+  C.SKIN_LIGHT,
+  C.SKIN_MEDIUM,
+  C.SKIN_TAN,
+  C.SKIN_BROWN,
+  C.SKIN_DARK,
+];
+
+export const HAIR_COLORS = [
+  C.HAIR_BLONDE,
+  C.HAIR_AUBURN,
+  C.HAIR_BROWN,
+  C.HAIR_BLACK,
+  C.HAIR_RED,
+  C.HAIR_PINK,
+  C.HAIR_PURPLE,
+];
+
+export const OUTFIT_COLORS = [
+  C.OUTFIT_PINK,
+  C.OUTFIT_PURPLE,
+  C.OUTFIT_BLUE,
+  C.OUTFIT_GREEN,
+  C.OUTFIT_ORANGE,
+  C.OUTFIT_YELLOW,
+  C.OUTFIT_TEAL,
+];
