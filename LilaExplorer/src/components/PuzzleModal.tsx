@@ -75,19 +75,18 @@ export function PuzzleModal({
   const renderChoices = () => {
     if (uiState !== 'question') return null;
 
-    if (puzzle.type === 'count') {
-      const { n } = puzzle;
-      const nums = n === 2 ? [1, 2, 3] : [n - 1, n, n + 1];
+    // Text choices — math word problems, reading comprehension, knowledge
+    if (puzzle.type === 'choice') {
       return (
-        <View style={styles.choicesRow}>
-          {nums.map((num) => (
+        <View style={styles.choicesCol}>
+          {puzzle.choices.map((text, i) => (
             <TouchableOpacity
-              key={num}
-              style={styles.numBtn}
-              onPress={() => handleAnswer(num === n)}
+              key={i}
+              style={styles.choiceTextBtn}
+              onPress={() => handleAnswer(i === puzzle.correct)}
               activeOpacity={0.75}
             >
-              <Text style={styles.numBtnText}>{num}</Text>
+              <Text style={styles.choiceTextBtnText}>{text}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -146,10 +145,7 @@ export function PuzzleModal({
       ? puzzle.question
       : puzzle.statement;
 
-  const countDisplay =
-    puzzle.type === 'count'
-      ? Array(puzzle.n).fill(puzzle.emoji).join('  ')
-      : null;
+  // No extra display element needed now — choice questions stand alone
 
   // ── Render ───────────────────────────────────────────────────────
 
@@ -169,9 +165,6 @@ export function PuzzleModal({
                 </Text>
                 <View style={styles.divider} />
 
-                {countDisplay && (
-                  <Text style={styles.countDisplay}>{countDisplay}</Text>
-                )}
                 <Text style={styles.questionText}>{questionText}</Text>
 
                 {renderChoices()}
@@ -252,43 +245,45 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     marginBottom: 18,
   },
-  countDisplay: {
-    fontSize: 36,
-    letterSpacing: 4,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
   questionText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: C.TEXT_DARK,
     textAlign: 'center',
-    marginBottom: 22,
-    lineHeight: 26,
+    marginBottom: 16,
+    lineHeight: 25,
   },
-  // Count choices
+  // Text answer choices (choice type)
+  choicesCol: {
+    alignSelf: 'stretch',
+    gap: 10,
+    marginBottom: 16,
+  },
+  choiceTextBtn: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 2.5,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  choiceTextBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.TEXT_DARK,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+  // Emoji choices (which type)
   choicesRow: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 20,
-  },
-  numBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: C.UI_PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#D63B6E',
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  numBtnText: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: 'white',
   },
   // Which choices
   emojiBtn: {
