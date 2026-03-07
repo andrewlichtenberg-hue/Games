@@ -70,11 +70,14 @@ export function HomeScreen({ navigation }: Props) {
     discoveredAnimals,
     pendingLevelUp,
     clearPendingLevelUp,
+    dailyStreak,
+    checkDailyStreak,
   } = useGameStore();
 
   useFocusEffect(
     React.useCallback(() => {
       audioManager.playMusic('theme');
+      checkDailyStreak();
     }, [])
   );
 
@@ -112,8 +115,23 @@ export function HomeScreen({ navigation }: Props) {
 
           {/* Companion room */}
           <View style={styles.roomSection}>
-            <Text style={styles.sectionTitle}>🏡 Lila's Room</Text>
-            <View style={styles.room}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>🏡 Lila's Room</Text>
+              {dailyStreak > 1 && (
+                <View style={styles.streakBadge}>
+                  <Text style={styles.streakText}>🔥 Day {dailyStreak}</Text>
+                </View>
+              )}
+              <Text style={styles.roomTapHint}>Tap to enter →</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                navigation.navigate('Room');
+              }}
+              activeOpacity={0.88}
+              style={styles.room}
+            >
               <LinearGradient
                 colors={['#FFF3E0', '#FFF9C4']}
                 style={styles.roomGradient}
@@ -165,7 +183,7 @@ export function HomeScreen({ navigation }: Props) {
                   </Text>
                 )}
               </LinearGradient>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Stats strip */}
@@ -267,11 +285,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     minHeight: 120,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: C.TEXT_DARK,
-    marginBottom: 8,
+  },
+  streakBadge: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1.5,
+    borderColor: '#FFD700',
+  },
+  streakText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#7E3F00',
+  },
+  roomTapHint: {
+    marginLeft: 'auto',
+    fontSize: 12,
+    color: C.UI_PRIMARY,
+    fontWeight: '700',
   },
   room: {
     flex: 1,

@@ -13,6 +13,7 @@ import { WorldMapScreen } from './src/screens/WorldMapScreen';
 import { ExplorationScreen } from './src/screens/ExplorationScreen';
 import { JournalScreen } from './src/screens/JournalScreen';
 import { WardrobeScreen } from './src/screens/WardrobeScreen';
+import { RoomScreen } from './src/screens/RoomScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   Exploration: { locationId: string };
   Journal: undefined;
   Wardrobe: undefined;
+  Room: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -59,6 +61,7 @@ export default function App() {
             <Stack.Screen name="Exploration" component={ExplorationScreen} />
             <Stack.Screen name="Journal" component={JournalScreen} />
             <Stack.Screen name="Wardrobe" component={WardrobeScreen} />
+            <Stack.Screen name="Room" component={RoomScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

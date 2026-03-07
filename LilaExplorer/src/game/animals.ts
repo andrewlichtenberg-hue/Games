@@ -24,6 +24,8 @@ export interface Animal {
   accentColor: string;
   xpReward: number;
   friendshipLines: string[]; // what they say when you increase friendship
+  hidden?: boolean;    // secret animal — only appears after enough visits
+  minVisits?: number;  // how many visits unlock the hidden animal (default 3)
 }
 
 export const ANIMALS: Animal[] = [
@@ -409,6 +411,73 @@ export const ANIMALS: Animal[] = [
     accentColor: '#E8D5B7',
     xpReward: 70,
     friendshipLines: ['You are the rarest kind of human — a kind one.', 'I\'ll watch over the forest for you, always.'],
+  },
+
+  // ── Hidden secret animals ─────────────────────────────────────
+  // These only appear after 3 visits to their location.
+  {
+    id: 'groundhog',
+    name: 'Gabby the Groundhog',
+    type: 'groundhog',
+    emoji: '🦫',
+    rarity: 'rare',
+    locationIds: ['prospect-park'],
+    funFact: 'Groundhogs can whistle loudly to warn friends of danger — that\'s why they\'re also called "whistle-pigs"!',
+    greetings: ['Pssst! I only come out for patient explorers!', '*peeks from burrow* You came back! I knew you would!'],
+    bodyColor: '#8B6914',
+    accentColor: '#D4A464',
+    xpReward: 30,
+    friendshipLines: ['I\'ll save you a cozy spot in my burrow!', 'You\'re the only human I trust!'],
+    hidden: true,
+    minVisits: 3,
+  },
+  {
+    id: 'heron',
+    name: 'Henry the Great Blue Heron',
+    type: 'heron',
+    emoji: '🦢',
+    rarity: 'legendary',
+    locationIds: ['central-park'],
+    funFact: 'Great blue herons stand perfectly still for minutes at a time, then strike at fish faster than you can blink!',
+    greetings: ['…You have been patient. I respect that.', '*stands very still* I have been watching the pond all morning.'],
+    bodyColor: '#78909C',
+    accentColor: '#B0BEC5',
+    xpReward: 50,
+    friendshipLines: ['Stillness is a superpower. You are learning it.', 'I will show you where the fish are happiest.'],
+    hidden: true,
+    minVisits: 3,
+  },
+  {
+    id: 'sandpiper',
+    name: 'Pip the Sandpiper',
+    type: 'sandpiper',
+    emoji: '🐦',
+    rarity: 'rare',
+    locationIds: ['rockaway-beach'],
+    funFact: 'Sandpipers sprint along the waterline so fast their legs blur — they can take 60 steps per second!',
+    greetings: ['Breeep! Breeep! You noticed me!', 'I run SO FAST! Want to race? You won\'t win!'],
+    bodyColor: '#BCAAA4',
+    accentColor: '#FFF8E1',
+    xpReward: 35,
+    friendshipLines: ['I\'ll run in circles just for you!', 'Only fast explorers find me!'],
+    hidden: true,
+    minVisits: 3,
+  },
+  {
+    id: 'firefly',
+    name: 'Flo the Firefly',
+    type: 'firefly',
+    emoji: '✨',
+    rarity: 'legendary',
+    locationIds: ['hudson-valley'],
+    funFact: 'Fireflies make light using a chemical called luciferin — their light produces almost no heat at all!',
+    greetings: ['*blinks gently* Hello, quiet explorer.', 'I only glow for people who know how to be still.'],
+    bodyColor: '#F9CA24',
+    accentColor: '#FFFDE7',
+    xpReward: 55,
+    friendshipLines: ['I\'ll light your path always!', 'You\'re as bright as a starry night!'],
+    hidden: true,
+    minVisits: 3,
   },
 ];
 

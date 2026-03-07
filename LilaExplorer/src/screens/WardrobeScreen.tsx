@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Animated,
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
 import { LilaCharacter } from '../components/LilaCharacter';
-import { BigButton } from '../components/ui/BigButton';
 import { C } from '../utils/colors';
 import { ITEMS, GameItem, SlotType } from '../game/items';
 import { useGameStore } from '../store/gameStore';
@@ -23,25 +23,42 @@ const ITEM_W = (width - 52) / 3;
 
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'Wardrobe'> };
 
-type TabType = 'hat' | 'outfit' | 'accessory' | 'powerup';
+type TabType = 'hat' | 'outfit' | 'accessory' | 'powerup' | 'furniture';
 const TABS: { key: TabType; label: string; emoji: string }[] = [
   { key: 'hat', label: 'Hats', emoji: '👒' },
   { key: 'outfit', label: 'Outfits', emoji: '👗' },
   { key: 'accessory', label: 'Extras', emoji: '🎒' },
   { key: 'powerup', label: 'Powers', emoji: '⚡' },
+  { key: 'furniture', label: 'Room', emoji: '🏡' },
 ];
 
 function ItemTile({
   item,
   owned,
   equipped,
+  equippedLabel,
   onPress,
 }: {
   item: GameItem;
   owned: boolean;
   equipped: boolean;
+  equippedLabel?: string;
   onPress: () => void;
 }) {
+  const sparkleAnim = useRef(new Animated.Value(0)).current;
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (owned) {
+      sparkleAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(sparkleAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(sparkleAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+      ]).start();
+    }
+    onPress();
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -49,10 +66,7 @@ function ItemTile({
         !owned && styles.tileLocked,
         equipped && styles.tileEquipped,
       ]}
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onPress();
-      }}
+      onPress={handlePress}
       activeOpacity={owned ? 0.8 : 1}
     >
       <Text style={styles.tileEmoji}>{item.emoji}</Text>
@@ -61,7 +75,7 @@ function ItemTile({
       </Text>
       {equipped && (
         <View style={styles.equippedBadge}>
-          <Text style={styles.equippedBadgeText}>On! ✓</Text>
+          <Text style={styles.equippedBadgeText}>{equippedLabel ?? 'On! ✓'}</Text>
         </View>
       )}
       {!owned && (
@@ -69,6 +83,25 @@ function ItemTile({
           <Text style={styles.lockedText}>Lv {item.unlocksAtLevel}</Text>
         </View>
       )}
+      {/* Sparkle on tap */}
+      <Animated.Text
+        style={[
+          styles.sparkle,
+          {
+            opacity: sparkleAnim,
+            transform: [
+              {
+                scale: sparkleAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.5, 1.6, 0.5],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        ✨
+      </Animated.Text>
     </TouchableOpacity>
   );
 }
@@ -76,9 +109,9 @@ function ItemTile({
 export function WardrobeScreen({ navigation }: Props) {
   const {
     hairColor, skinTone, outfitColor,
-    equippedHat, equippedOutfit, equippedAccessory,
-    ownedItems, ownedPowerups,
-    equipItem, unequipItem,
+    equippedHat, equippedOutfit, equippedAccessories,
+    ownedItems, ownedPowerups, activePowerups, equippedFurniture,
+    equipItem, unequipItem, toggleActivePowerup, toggleFurniture,
   } = useGameStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('hat');
@@ -89,18 +122,48 @@ export function WardrobeScreen({ navigation }: Props) {
   const isEquipped = (item: GameItem): boolean => {
     if (item.type === 'hat') return equippedHat === item.id;
     if (item.type === 'outfit') return equippedOutfit === item.id;
-    if (item.type === 'accessory') return equippedAccessory === item.id;
-    return ownedPowerups.includes(item.id);
+    if (item.type === 'accessory') return equippedAccessories.includes(item.id);
+    if (item.type === 'powerup') return activePowerups.includes(item.id);
+    if (item.type === 'furniture') return equippedFurniture.includes(item.id);
+    return false;
   };
 
   const isOwned = (item: GameItem): boolean => {
     if (item.type === 'powerup') return ownedPowerups.includes(item.id);
+    if (item.type === 'furniture') return ownedItems.includes(item.id);
     return ownedItems.includes(item.id);
+  };
+
+  const getEquippedLabel = (item: GameItem): string => {
+    if (item.type === 'powerup') return '⚡ Active';
+    if (item.type === 'furniture') return '🏡 Placed';
+    return 'On! ✓';
   };
 
   const handleItemPress = (item: GameItem) => {
     if (!isOwned(item)) return;
-    if (item.type === 'powerup') return; // powerups are auto-used
+
+    if (item.type === 'powerup') {
+      toggleActivePowerup(item.id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      audioManager.playSfx('pop');
+      return;
+    }
+
+    if (item.type === 'furniture') {
+      toggleFurniture(item.id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      audioManager.playSfx('pop');
+      return;
+    }
+
+    if (item.type === 'accessory') {
+      // equipItem handles toggle (add if not equipped, remove if already equipped)
+      equipItem(item.id, 'accessory');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      audioManager.playSfx('pop');
+      return;
+    }
 
     const slot = item.slot as SlotType;
     if (isEquipped(item)) {
@@ -118,6 +181,10 @@ export function WardrobeScreen({ navigation }: Props) {
   const previewOutfit = equippedOutfit
     ? ITEMS.find((i) => i.id === equippedOutfit)?.color ?? outfitColor
     : outfitColor;
+
+  // Status chips for powerup and furniture tabs
+  const powerupStatusText = `⚡ ${activePowerups.length}/2 Powers Active`;
+  const furnitureStatusText = `🏡 ${equippedFurniture.length}/5 Items in Room`;
 
   return (
     <LinearGradient colors={['#FFF3E0', '#FCE4EC']} style={styles.container}>
@@ -162,6 +229,35 @@ export function WardrobeScreen({ navigation }: Props) {
         ))}
       </View>
 
+      {/* Status chip for powerup/furniture tabs */}
+      {(activeTab === 'powerup' || activeTab === 'furniture') && (
+        <View style={styles.statusChipRow}>
+          <View style={[styles.statusChip, { backgroundColor: activeTab === 'powerup' ? '#FFF8E1' : '#E8F5E9' }]}>
+            <Text style={styles.statusChipText}>
+              {activeTab === 'powerup' ? powerupStatusText : furnitureStatusText}
+            </Text>
+          </View>
+          {activeTab === 'powerup' && (
+            <Text style={styles.statusHint}>Tap to activate or deactivate</Text>
+          )}
+          {activeTab === 'furniture' && (
+            <Text style={styles.statusHint}>Tap to add or remove from your room</Text>
+          )}
+        </View>
+      )}
+
+      {/* Accessory hint */}
+      {activeTab === 'accessory' && (
+        <View style={styles.statusChipRow}>
+          <View style={[styles.statusChip, { backgroundColor: '#EDE7F6' }]}>
+            <Text style={styles.statusChipText}>
+              🎒 {equippedAccessories.length}/2 Extras Equipped
+            </Text>
+          </View>
+          <Text style={styles.statusHint}>Equip up to 2 at once!</Text>
+        </View>
+      )}
+
       {/* Items grid */}
       <ScrollView
         style={{ flex: 1 }}
@@ -174,6 +270,7 @@ export function WardrobeScreen({ navigation }: Props) {
             item={item}
             owned={isOwned(item)}
             equipped={isEquipped(item)}
+            equippedLabel={getEquippedLabel(item)}
             onPress={() => handleItemPress(item)}
           />
         ))}
@@ -214,16 +311,16 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: 'rgba(255,255,255,0.7)',
     borderRadius: 16,
-    padding: 6,
-    gap: 4,
+    padding: 5,
+    gap: 3,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 12,
   },
   tabActive: {
@@ -233,14 +330,37 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  tabEmoji: { fontSize: 20 },
+  tabEmoji: { fontSize: 18 },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: C.TEXT_MID,
     marginTop: 2,
   },
   tabLabelActive: { color: C.UI_PRIMARY },
+  statusChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 8,
+  },
+  statusChip: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: C.TEXT_DARK,
+  },
+  statusHint: {
+    fontSize: 11,
+    color: C.TEXT_LIGHT,
+    fontWeight: '600',
+    flex: 1,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -302,5 +422,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: C.TEXT_MID,
+  },
+  sparkle: {
+    position: 'absolute',
+    fontSize: 22,
+    top: '30%',
+    left: '30%',
+    pointerEvents: 'none',
   },
 });

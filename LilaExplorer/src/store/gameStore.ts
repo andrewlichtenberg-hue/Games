@@ -7,13 +7,24 @@ import {
   MAX_FRIENDSHIP,
 } from '../game/progression';
 
-// IDs of all power-up items — kept here to avoid circular import
 const POWERUP_IDS = [
   'powerup-binoculars',
   'powerup-rain-boots',
   'powerup-lantern',
   'powerup-journal-upgrade',
 ];
+
+const FURNITURE_IDS = [
+  'furn-lamp',
+  'furn-poster',
+  'furn-bookshelf',
+  'furn-cactus',
+  'furn-trophy',
+];
+
+const MAX_ACTIVE_POWERUPS = 2;
+const MAX_EQUIPPED_ACCESSORIES = 2;
+const MAX_FURNITURE = 5;
 
 export interface GameState {
   // ── Player identity ─────────────────────────────────────────
@@ -26,11 +37,12 @@ export interface GameState {
   // ── Progression ─────────────────────────────────────────────
   level: number;
   xp: number;
-  pendingLevelUp: number | null; // level just reached, needs to show modal
+  pendingLevelUp: number | null;
 
   // ── World ────────────────────────────────────────────────────
   unlockedLocations: string[];
   visitedLocations: string[];
+  locationVisitCounts: Record<string, number>;
 
   // ── Animals ──────────────────────────────────────────────────
   discoveredAnimals: string[];
@@ -41,12 +53,18 @@ export interface GameState {
   ownedItems: string[];
   equippedHat: string | null;
   equippedOutfit: string | null;
-  equippedAccessory: string | null;
+  equippedAccessories: string[];  // up to 2 cosmetic accessories
   ownedPowerups: string[];
+  activePowerups: string[];       // up to 2 player-selected active powerups
+  equippedFurniture: string[];    // items placed in Lila's room
 
   // ── Journal ──────────────────────────────────────────────────
-  journalEntries: string[]; // animal ids in discovery order
-  claimedLocationBonuses: string[]; // locationIds whose completion XP was collected
+  journalEntries: string[];
+  claimedLocationBonuses: string[];
+
+  // ── Daily streak ─────────────────────────────────────────────
+  dailyStreak: number;
+  lastPlayDate: string | null;
 
   // ── Actions ──────────────────────────────────────────────────
   createCharacter: (name: string, hairColor: string, skinTone: string, outfitColor: string) => void;
@@ -57,8 +75,11 @@ export interface GameState {
   visitLocation: (locationId: string) => void;
   claimLocationBonus: (locationId: string, xp: number) => void;
   equipItem: (itemId: string, slot: 'hat' | 'outfit' | 'accessory') => void;
-  unequipItem: (slot: 'hat' | 'outfit' | 'accessory') => void;
+  unequipItem: (slot: 'hat' | 'outfit' | 'accessory', itemId?: string) => void;
+  toggleActivePowerup: (itemId: string) => void;
+  toggleFurniture: (itemId: string) => void;
   unlockItem: (itemId: string) => void;
+  checkDailyStreak: () => number;
   resetGame: () => void;
 }
 
@@ -73,20 +94,36 @@ const INITIAL_STATE = {
   isCharacterCreated: false,
   level: 1,
   xp: 0,
-  pendingLevelUp: null,
+  pendingLevelUp: null as number | null,
   unlockedLocations: DEFAULT_UNLOCKED,
-  visitedLocations: [],
-  discoveredAnimals: [],
-  companionAnimals: [],
-  animalFriendship: {},
+  visitedLocations: [] as string[],
+  locationVisitCounts: {} as Record<string, number>,
+  discoveredAnimals: [] as string[],
+  companionAnimals: [] as string[],
+  animalFriendship: {} as Record<string, number>,
   ownedItems: DEFAULT_OWNED_ITEMS,
-  equippedHat: 'hat-explorer',
-  equippedOutfit: 'outfit-garden',
-  equippedAccessory: null,
-  ownedPowerups: [],
-  journalEntries: [],
-  claimedLocationBonuses: [],
+  equippedHat: 'hat-explorer' as string | null,
+  equippedOutfit: 'outfit-garden' as string | null,
+  equippedAccessories: [] as string[],
+  ownedPowerups: [] as string[],
+  activePowerups: [] as string[],
+  equippedFurniture: [] as string[],
+  journalEntries: [] as string[],
+  claimedLocationBonuses: [] as string[],
+  dailyStreak: 0,
+  lastPlayDate: null as string | null,
 };
+
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function yesterdayStr(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export const useGameStore = create<GameState>()(
   persist(
@@ -94,13 +131,7 @@ export const useGameStore = create<GameState>()(
       ...INITIAL_STATE,
 
       createCharacter: (name, hairColor, skinTone, outfitColor) =>
-        set({
-          playerName: name,
-          hairColor,
-          skinTone,
-          outfitColor,
-          isCharacterCreated: true,
-        }),
+        set({ playerName: name, hairColor, skinTone, outfitColor, isCharacterCreated: true }),
 
       gainXP: (amount) => {
         const state = get();
@@ -117,13 +148,27 @@ export const useGameStore = create<GameState>()(
             ? [...new Set([...state.ownedItems, ...reward.items])]
             : state.ownedItems;
 
-          // Also populate ownedPowerups when level rewards include powerup IDs
-          const rewardPowerups = (reward?.items ?? []).filter(id =>
-            POWERUP_IDS.includes(id)
-          );
+          const rewardPowerups = (reward?.items ?? []).filter(id => POWERUP_IDS.includes(id));
           const newOwnedPowerups = rewardPowerups.length > 0
             ? [...new Set([...state.ownedPowerups, ...rewardPowerups])]
             : state.ownedPowerups;
+
+          // Auto-activate new powerups if slots remain
+          const newActivePowerups = [...state.activePowerups];
+          for (const pid of rewardPowerups) {
+            if (newActivePowerups.length < MAX_ACTIVE_POWERUPS && !newActivePowerups.includes(pid)) {
+              newActivePowerups.push(pid);
+            }
+          }
+
+          // Auto-place new furniture in room if space
+          const rewardFurniture = (reward?.items ?? []).filter(id => FURNITURE_IDS.includes(id));
+          const newEquippedFurniture = [...state.equippedFurniture];
+          for (const fid of rewardFurniture) {
+            if (newEquippedFurniture.length < MAX_FURNITURE && !newEquippedFurniture.includes(fid)) {
+              newEquippedFurniture.push(fid);
+            }
+          }
 
           set({
             xp: newXp,
@@ -132,6 +177,8 @@ export const useGameStore = create<GameState>()(
             unlockedLocations: newUnlocked,
             ownedItems: newItems,
             ownedPowerups: newOwnedPowerups,
+            activePowerups: newActivePowerups,
+            equippedFurniture: newEquippedFurniture,
           });
         } else {
           set({ xp: newXp });
@@ -163,33 +210,81 @@ export const useGameStore = create<GameState>()(
       },
 
       visitLocation: (locationId) => {
-        const { visitedLocations } = get();
-        if (!visitedLocations.includes(locationId)) {
-          set({ visitedLocations: [...visitedLocations, locationId] });
-        }
+        const { visitedLocations, locationVisitCounts } = get();
+        const newCounts = {
+          ...locationVisitCounts,
+          [locationId]: (locationVisitCounts[locationId] ?? 0) + 1,
+        };
+        const newVisited = visitedLocations.includes(locationId)
+          ? visitedLocations
+          : [...visitedLocations, locationId];
+        set({ visitedLocations: newVisited, locationVisitCounts: newCounts });
       },
 
       equipItem: (itemId, slot) => {
-        if (slot === 'hat') set({ equippedHat: itemId });
-        if (slot === 'outfit') set({ equippedOutfit: itemId });
-        if (slot === 'accessory') set({ equippedAccessory: itemId });
+        if (slot === 'hat') { set({ equippedHat: itemId }); return; }
+        if (slot === 'outfit') { set({ equippedOutfit: itemId }); return; }
+        if (slot === 'accessory') {
+          const { equippedAccessories } = get();
+          if (equippedAccessories.includes(itemId)) {
+            // Unequip if already on
+            set({ equippedAccessories: equippedAccessories.filter(id => id !== itemId) });
+          } else {
+            const updated = equippedAccessories.length < MAX_EQUIPPED_ACCESSORIES
+              ? [...equippedAccessories, itemId]
+              : [equippedAccessories[equippedAccessories.length - 1], itemId];
+            set({ equippedAccessories: updated });
+          }
+        }
       },
 
-      unequipItem: (slot) => {
-        if (slot === 'hat') set({ equippedHat: null });
-        if (slot === 'outfit') set({ equippedOutfit: null });
-        if (slot === 'accessory') set({ equippedAccessory: null });
+      unequipItem: (slot, itemId) => {
+        if (slot === 'hat') { set({ equippedHat: null }); return; }
+        if (slot === 'outfit') { set({ equippedOutfit: null }); return; }
+        if (slot === 'accessory' && itemId) {
+          const { equippedAccessories } = get();
+          set({ equippedAccessories: equippedAccessories.filter(id => id !== itemId) });
+        }
+      },
+
+      toggleActivePowerup: (itemId) => {
+        const { activePowerups, ownedPowerups } = get();
+        if (!ownedPowerups.includes(itemId)) return;
+        if (activePowerups.includes(itemId)) {
+          set({ activePowerups: activePowerups.filter(id => id !== itemId) });
+        } else if (activePowerups.length < MAX_ACTIVE_POWERUPS) {
+          set({ activePowerups: [...activePowerups, itemId] });
+        } else {
+          // Evict oldest, add new
+          set({ activePowerups: [activePowerups[1], itemId] });
+        }
+      },
+
+      toggleFurniture: (itemId) => {
+        const { equippedFurniture, ownedItems } = get();
+        const owned = ownedItems.includes(itemId) || FURNITURE_IDS.includes(itemId);
+        if (!owned) return;
+        if (equippedFurniture.includes(itemId)) {
+          set({ equippedFurniture: equippedFurniture.filter(id => id !== itemId) });
+        } else if (equippedFurniture.length < MAX_FURNITURE) {
+          set({ equippedFurniture: [...equippedFurniture, itemId] });
+        }
       },
 
       unlockItem: (itemId) => {
-        const { ownedItems, ownedPowerups } = get();
-        if (!ownedItems.includes(itemId)) {
-          const isPowerup = POWERUP_IDS.includes(itemId);
-          set({
-            ownedItems: [...ownedItems, itemId],
-            ownedPowerups: isPowerup ? [...ownedPowerups, itemId] : ownedPowerups,
-          });
-        }
+        const { ownedItems, ownedPowerups, activePowerups } = get();
+        if (ownedItems.includes(itemId)) return;
+        const isPowerup = POWERUP_IDS.includes(itemId);
+        const newOwnedPowerups = isPowerup ? [...ownedPowerups, itemId] : ownedPowerups;
+        const newActivePowerups =
+          isPowerup && activePowerups.length < MAX_ACTIVE_POWERUPS
+            ? [...activePowerups, itemId]
+            : activePowerups;
+        set({
+          ownedItems: [...ownedItems, itemId],
+          ownedPowerups: newOwnedPowerups,
+          activePowerups: newActivePowerups,
+        });
       },
 
       claimLocationBonus: (locationId, xp) => {
@@ -199,21 +294,50 @@ export const useGameStore = create<GameState>()(
         get().gainXP(xp);
       },
 
+      checkDailyStreak: () => {
+        const { lastPlayDate, dailyStreak } = get();
+        const today = todayStr();
+        if (lastPlayDate === today) return 0;
+        const yesterday = yesterdayStr();
+        const newStreak = lastPlayDate === yesterday ? dailyStreak + 1 : 1;
+        const bonus = newStreak > 1 ? 15 : 0;
+        set({ dailyStreak: newStreak, lastPlayDate: today });
+        if (bonus > 0) get().gainXP(bonus);
+        return bonus;
+      },
+
       resetGame: () => set({ ...INITIAL_STATE }),
     }),
     {
-      name: 'lila-explorer-save-v1',
+      name: 'lila-explorer-save-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      // Migration: for existing saves, sync any powerup IDs from ownedItems → ownedPowerups
       onRehydrateStorage: () => (state) => {
-        if (state) {
-          const missing = POWERUP_IDS.filter(
-            id => state.ownedItems.includes(id) && !state.ownedPowerups.includes(id)
-          );
-          if (missing.length > 0) {
-            state.ownedPowerups = [...state.ownedPowerups, ...missing];
-          }
+        if (!state) return;
+
+        // Migrate powerups from ownedItems
+        const missingPowerups = POWERUP_IDS.filter(
+          id => state.ownedItems.includes(id) && !state.ownedPowerups.includes(id)
+        );
+        if (missingPowerups.length > 0) {
+          state.ownedPowerups = [...(state.ownedPowerups ?? []), ...missingPowerups];
         }
+
+        // Seed activePowerups from ownedPowerups if missing (old saves had all auto-active)
+        if (!state.activePowerups || state.activePowerups.length === 0) {
+          state.activePowerups = (state.ownedPowerups ?? []).slice(0, MAX_ACTIVE_POWERUPS);
+        }
+
+        // Migrate old equippedAccessory (single string) → equippedAccessories (array)
+        if (!state.equippedAccessories) {
+          const legacy = (state as any).equippedAccessory as string | null;
+          state.equippedAccessories = legacy ? [legacy] : [];
+        }
+
+        // Defaults for new fields
+        if (!state.equippedFurniture) state.equippedFurniture = [];
+        if (!state.locationVisitCounts) state.locationVisitCounts = {};
+        if (state.dailyStreak == null) state.dailyStreak = 0;
+        if (state.lastPlayDate == null) state.lastPlayDate = null;
       },
     }
   )

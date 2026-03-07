@@ -550,6 +550,83 @@ export const ANIMAL_PUZZLES: AnimalPuzzleSet[] = [
       },
     ],
   },
+
+  // ── Hidden animals ─────────────────────────────────────────────────────────
+  {
+    animalId: 'groundhog',
+    bonusXP: 15,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Gabby hibernates for 5 months every year. How many months per year is she AWAKE?',
+        choices: ['5 months', '7 months', '8 months'],
+        correct: 1,
+      },
+      {
+        type: 'truefalse',
+        statement: 'Groundhog Day is a real holiday where people watch a groundhog to predict the weather. Scientists say groundhogs are very accurate weather forecasters.',
+        isTrue: false,
+      },
+    ],
+  },
+  {
+    animalId: 'heron',
+    bonusXP: 25,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'A heron stands still for 8 minutes before catching a fish. It eats 3 fish per hour. How many times did it stand still to catch those 3 fish?',
+        choices: ['2 times', '3 times', '4 times'],
+        correct: 1,
+      },
+      {
+        type: 'choice',
+        question: 'Great blue herons wade in water and use their eyes to spot fish. Why do they stand so perfectly still while hunting?',
+        choices: [
+          'Moving creates ripples that scare fish away',
+          'They fall asleep while waiting',
+          'Their legs hurt so they must rest',
+        ],
+        correct: 0,
+      },
+    ],
+  },
+  {
+    animalId: 'sandpiper',
+    bonusXP: 15,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Pip takes 60 steps per second. How many steps does she take in 5 seconds?',
+        choices: ['240 steps', '300 steps', '350 steps'],
+        correct: 1,
+      },
+      {
+        type: 'which',
+        question: 'Sandpipers eat tiny creatures in the wet sand. Which food would they find there?',
+        choices: ['🦀', '🌰', '🍇'],
+        correct: 0,
+      },
+    ],
+  },
+  {
+    animalId: 'firefly',
+    bonusXP: 25,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Flo flashes 3 times per 10 seconds. How many times does she flash in one full minute?',
+        choices: ['12 times', '18 times', '24 times'],
+        correct: 1,
+      },
+      {
+        type: 'choice',
+        question: 'Firefly light produces almost no heat — unlike a lightbulb, which gets very hot. What do scientists call light that produces little or no heat?',
+        choices: ['Cold light / bioluminescence', 'Solar energy', 'Electrical current'],
+        correct: 0,
+      },
+    ],
+  },
 ];
 
 export const getPuzzleSet = (animalId: string): AnimalPuzzleSet | undefined =>

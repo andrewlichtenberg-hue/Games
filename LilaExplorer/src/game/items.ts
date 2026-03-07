@@ -1,5 +1,5 @@
-export type ItemType = 'hat' | 'outfit' | 'accessory' | 'powerup';
-export type SlotType = 'hat' | 'outfit' | 'accessory';
+export type ItemType = 'hat' | 'outfit' | 'accessory' | 'powerup' | 'furniture';
+export type SlotType = 'hat' | 'outfit' | 'accessory' | 'furniture';
 
 export interface GameItem {
   id: string;
@@ -197,6 +197,53 @@ export const ITEMS: GameItem[] = [
     description: 'Puzzle bonus XP is DOUBLED and a golden star shower falls every time you get one right!',
     unlocksAtLevel: 7,
     powerupEffect: 'double_puzzle_xp',
+  },
+
+  // ── Furniture ─────────────────────────────────────────────────
+  {
+    id: 'furn-lamp',
+    name: 'Cozy Lamp',
+    type: 'furniture',
+    slot: 'furniture',
+    emoji: '🪔',
+    description: 'A warm glowing lamp that makes your room feel magical at any hour!',
+    unlocksAtLevel: 2,
+  },
+  {
+    id: 'furn-poster',
+    name: 'Nature Poster',
+    type: 'furniture',
+    slot: 'furniture',
+    emoji: '🖼️',
+    description: 'A beautiful map-style poster of the places you have explored!',
+    unlocksAtLevel: 4,
+  },
+  {
+    id: 'furn-bookshelf',
+    name: 'Explorer Bookshelf',
+    type: 'furniture',
+    slot: 'furniture',
+    emoji: '📚',
+    description: 'Crammed with field guides, nature journals, and adventure stories!',
+    unlocksAtLevel: 6,
+  },
+  {
+    id: 'furn-cactus',
+    name: 'Lucky Cactus',
+    type: 'furniture',
+    slot: 'furniture',
+    emoji: '🌵',
+    description: 'A tiny potted cactus that never needs watering — and brings good luck!',
+    unlocksAtLevel: 8,
+  },
+  {
+    id: 'furn-trophy',
+    name: 'Explorer Trophy',
+    type: 'furniture',
+    slot: 'furniture',
+    emoji: '🏆',
+    description: 'A golden trophy for the greatest nature explorer in Brooklyn (and beyond)!',
+    unlocksAtLevel: 10,
   },
 ];
 
