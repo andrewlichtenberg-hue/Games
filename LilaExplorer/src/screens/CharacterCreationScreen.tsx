@@ -3,13 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
   TouchableOpacity,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+// Use gesture-handler's ScrollView so it cooperates with GestureHandlerRootView
+import { ScrollView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Haptics } from '../utils/haptics';
@@ -19,7 +20,9 @@ import { C, SKIN_TONES, HAIR_COLORS, OUTFIT_COLORS } from '../utils/colors';
 import { useGameStore } from '../store/gameStore';
 import type { RootStackParamList } from '../../App';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+const IS_SMALL_PHONE = height < 750; // iPhone SE / older models
+const CHAR_SIZE = IS_SMALL_PHONE ? 120 : 160;
 
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'CharacterCreation'> };
 
@@ -73,7 +76,11 @@ export function CharacterCreationScreen({ navigation }: Props) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, IS_SMALL_PHONE && styles.scrollCompact]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.header}>Create Your Explorer!</Text>
           <Text style={styles.subtitle}>Make her look just like you 🌟</Text>
 
@@ -88,7 +95,7 @@ export function CharacterCreationScreen({ navigation }: Props) {
                 skinTone={skinTone}
                 outfitColor={outfitColor}
                 equippedHat="hat-explorer"
-                size={160}
+                size={CHAR_SIZE}
               />
               <Text style={styles.previewName}>{name.trim() || 'Lila'}</Text>
             </LinearGradient>
@@ -175,6 +182,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 40,
+  },
+  scrollCompact: {
+    paddingTop: 36,
+    paddingBottom: 24,
   },
   header: {
     fontSize: 30,
