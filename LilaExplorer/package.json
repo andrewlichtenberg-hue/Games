@@ -12,7 +12,6 @@
     "@react-native-async-storage/async-storage": "^3.0.1",
     "@react-navigation/native": "^7.1.33",
     "@react-navigation/stack": "^7.8.4",
-    "@shopify/react-native-skia": "^2.5.1",
     "expo": "~55.0.5",
     "expo-av": "^16.0.8",
     "expo-haptics": "^55.0.8",
