@@ -7,6 +7,14 @@ import {
   MAX_FRIENDSHIP,
 } from '../game/progression';
 
+// IDs of all power-up items — kept here to avoid circular import
+const POWERUP_IDS = [
+  'powerup-binoculars',
+  'powerup-rain-boots',
+  'powerup-lantern',
+  'powerup-journal-upgrade',
+];
+
 export interface GameState {
   // ── Player identity ─────────────────────────────────────────
   playerName: string;
@@ -41,12 +49,7 @@ export interface GameState {
   claimedLocationBonuses: string[]; // locationIds whose completion XP was collected
 
   // ── Actions ──────────────────────────────────────────────────
-  createCharacter: (
-    name: string,
-    hairColor: string,
-    skinTone: string,
-    outfitColor: string
-  ) => void;
+  createCharacter: (name: string, hairColor: string, skinTone: string, outfitColor: string) => void;
   gainXP: (amount: number) => void;
   clearPendingLevelUp: () => void;
   discoverAnimal: (animalId: string) => void;
@@ -114,12 +117,21 @@ export const useGameStore = create<GameState>()(
             ? [...new Set([...state.ownedItems, ...reward.items])]
             : state.ownedItems;
 
+          // Also populate ownedPowerups when level rewards include powerup IDs
+          const rewardPowerups = (reward?.items ?? []).filter(id =>
+            POWERUP_IDS.includes(id)
+          );
+          const newOwnedPowerups = rewardPowerups.length > 0
+            ? [...new Set([...state.ownedPowerups, ...rewardPowerups])]
+            : state.ownedPowerups;
+
           set({
             xp: newXp,
             level: newLevel,
             pendingLevelUp: newLevel,
             unlockedLocations: newUnlocked,
             ownedItems: newItems,
+            ownedPowerups: newOwnedPowerups,
           });
         } else {
           set({ xp: newXp });
@@ -170,9 +182,13 @@ export const useGameStore = create<GameState>()(
       },
 
       unlockItem: (itemId) => {
-        const { ownedItems } = get();
+        const { ownedItems, ownedPowerups } = get();
         if (!ownedItems.includes(itemId)) {
-          set({ ownedItems: [...ownedItems, itemId] });
+          const isPowerup = POWERUP_IDS.includes(itemId);
+          set({
+            ownedItems: [...ownedItems, itemId],
+            ownedPowerups: isPowerup ? [...ownedPowerups, itemId] : ownedPowerups,
+          });
         }
       },
 
@@ -188,6 +204,17 @@ export const useGameStore = create<GameState>()(
     {
       name: 'lila-explorer-save-v1',
       storage: createJSONStorage(() => AsyncStorage),
+      // Migration: for existing saves, sync any powerup IDs from ownedItems → ownedPowerups
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const missing = POWERUP_IDS.filter(
+            id => state.ownedItems.includes(id) && !state.ownedPowerups.includes(id)
+          );
+          if (missing.length > 0) {
+            state.ownedPowerups = [...state.ownedPowerups, ...missing];
+          }
+        }
+      },
     }
   )
 );

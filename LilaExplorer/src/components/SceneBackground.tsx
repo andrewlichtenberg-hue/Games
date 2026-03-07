@@ -279,7 +279,7 @@ function CityScene({ W, groundY, accent }: { W: number; groundY: number; accent:
                 width={8}
                 height={12}
                 rx={1}
-                fill={Math.random() > 0.4 ? '#FFF9C4' : '#546E7A'}
+                fill={(row + col + i) % 3 !== 0 ? '#FFF9C4' : '#546E7A'}
                 opacity={0.85}
               />
             ))

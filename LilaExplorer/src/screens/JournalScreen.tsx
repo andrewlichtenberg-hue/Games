@@ -334,7 +334,7 @@ export function JournalScreen({ navigation }: Props) {
 
         {/* Scrapbook: location pages */}
         {activeTab === 'scrapbook' && (
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
             {visitedLocations.length === 0 && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyEmoji}>🌿</Text>
@@ -360,7 +360,7 @@ export function JournalScreen({ navigation }: Props) {
 
         {/* All / Companions: flat grid */}
         {activeTab !== 'scrapbook' && (
-          <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
             {gridAnimals.map((animal) => (
               <AnimalCard
                 key={animal.id}

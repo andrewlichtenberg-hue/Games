@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -18,6 +19,7 @@ import { BigButton } from '../components/ui/BigButton';
 import { C } from '../utils/colors';
 import { useGameStore } from '../store/gameStore';
 import { getAnimalById } from '../game/animals';
+import { getItemById } from '../game/items';
 import { audioManager } from '../audio/audioManager';
 import type { RootStackParamList } from '../../App';
 
@@ -63,6 +65,7 @@ export function HomeScreen({ navigation }: Props) {
     level,
     xp,
     equippedHat,
+    equippedOutfit,
     companionAnimals,
     discoveredAnimals,
     pendingLevelUp,
@@ -75,7 +78,10 @@ export function HomeScreen({ navigation }: Props) {
     }, [])
   );
 
-  const visibleCompanions = companionAnimals.slice(0, 4);
+  // Apply the equipped outfit's color (or 'rainbow') to the character
+  const activeOutfitColor = equippedOutfit
+    ? (getItemById(equippedOutfit)?.color ?? outfitColor)
+    : outfitColor;
 
   return (
     <>
@@ -94,7 +100,7 @@ export function HomeScreen({ navigation }: Props) {
               <LilaCharacter
                 hairColor={hairColor}
                 skinTone={skinTone}
-                outfitColor={outfitColor}
+                outfitColor={activeOutfitColor}
                 equippedHat={equippedHat}
                 size={80}
               />
@@ -104,7 +110,7 @@ export function HomeScreen({ navigation }: Props) {
             </View>
           </LinearGradient>
 
-          {/* Companion room — stretches to fill remaining space */}
+          {/* Companion room */}
           <View style={styles.roomSection}>
             <Text style={styles.sectionTitle}>🏡 Lila's Room</Text>
             <View style={styles.room}>
@@ -114,29 +120,44 @@ export function HomeScreen({ navigation }: Props) {
               >
                 {/* Floor */}
                 <View style={styles.roomFloor} />
+
                 {/* Lila standing in room */}
                 <View style={styles.lilaInRoom}>
                   <LilaCharacter
                     hairColor={hairColor}
                     skinTone={skinTone}
-                    outfitColor={outfitColor}
+                    outfitColor={activeOutfitColor}
                     equippedHat={equippedHat}
                     size={100}
                   />
                 </View>
-                {/* Companion animals */}
-                {visibleCompanions.length > 0 ? (
-                  <View style={styles.companions}>
-                    {visibleCompanions.map((id, i) => {
-                      const animal = getAnimalById(id);
-                      if (!animal) return null;
-                      return (
-                        <View key={id} style={[styles.companionItem, { left: 20 + i * 68 }]}>
-                          <AnimalSprite type={animal.type} size={54} bodyColor={animal.bodyColor} accentColor={animal.accentColor} />
-                          <Text style={styles.companionName}>{animal.name.split(' ')[0]}</Text>
-                        </View>
-                      );
-                    })}
+
+                {/* Companion animals — horizontal scroll, no cap */}
+                {companionAnimals.length > 0 ? (
+                  <View style={styles.companionScroll}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.companionInner}
+                    >
+                      {companionAnimals.map((id) => {
+                        const animal = getAnimalById(id);
+                        if (!animal) return null;
+                        return (
+                          <View key={id} style={styles.companionItem}>
+                            <AnimalSprite
+                              type={animal.type}
+                              size={44}
+                              bodyColor={animal.bodyColor}
+                              accentColor={animal.accentColor}
+                            />
+                            <Text style={styles.companionName}>
+                              {animal.name.split(' ')[0]}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
                   </View>
                 ) : (
                   <Text style={styles.noCompanions}>
@@ -282,19 +303,23 @@ const styles = StyleSheet.create({
     bottom: 24,
     right: 24,
   },
-  companions: {
+  // Companions: horizontal scroll at bottom-left, leaves room for Lila
+  companionScroll: {
     position: 'absolute',
     bottom: 24,
-    left: 16,
+    left: 12,
+    right: 130, // leave room for Lila (size 100 + 24 margin + 6 extra)
+  },
+  companionInner: {
     flexDirection: 'row',
+    gap: 8,
+    paddingRight: 4,
   },
   companionItem: {
-    position: 'absolute',
     alignItems: 'center',
-    bottom: 0,
   },
   companionName: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: C.TEXT_MID,
     marginTop: 2,

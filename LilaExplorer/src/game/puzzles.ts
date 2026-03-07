@@ -423,6 +423,133 @@ export const ANIMAL_PUZZLES: AnimalPuzzleSet[] = [
       },
     ],
   },
+
+  // ── Cape Cod ────────────────────────────────────────────────────────────────
+  {
+    animalId: 'seal',
+    bonusXP: 20,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Shelby can hold her breath for 30 minutes. If she dives 3 times and uses 8 minutes each dive, how many minutes of breath does she have left?',
+        choices: ['4 minutes', '6 minutes', '8 minutes'],
+        correct: 1,
+      },
+      {
+        type: 'choice',
+        question: 'Harbor seals haul out onto rocks to warm up because water drains body heat 25 times faster than air. Why does water cool you down so much faster?',
+        choices: [
+          'Water touches more of your skin and carries heat away quickly',
+          'Water is always colder than air',
+          'Water makes your skin thinner',
+        ],
+        correct: 0,
+      },
+    ],
+  },
+  {
+    animalId: 'plover',
+    bonusXP: 20,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Pippa lays 4 eggs in her nest. If 3 out of every 4 eggs hatch, how many chicks will she likely have?',
+        choices: ['2 chicks', '3 chicks', '4 chicks'],
+        correct: 1,
+      },
+      {
+        type: 'choice',
+        question: 'Piping plovers pretend to have a broken wing to lure predators away from their nest. What is this behavior called?',
+        choices: ['A distraction display', 'Migration', 'Hibernation'],
+        correct: 0,
+      },
+    ],
+  },
+  {
+    animalId: 'coyote',
+    bonusXP: 25,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Eastern coyotes are a mix of coyote and wolf. A coyote weighs about 30 pounds and a wolf about 80 pounds. Coby weighs 45 pounds. Is he closer in size to a coyote or a wolf?',
+        choices: ['Closer to a coyote', 'Exactly in the middle', 'Closer to a wolf'],
+        correct: 0,
+      },
+      {
+        type: 'truefalse',
+        statement: 'Eastern coyotes can only live in the wilderness far from cities. They never adapt to living near people.',
+        isTrue: false,
+      },
+    ],
+  },
+
+  // ── Acadia ──────────────────────────────────────────────────────────────────
+  {
+    animalId: 'porcupine',
+    bonusXP: 22,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Penny has 30,000 quills. If she loses 100 quills in a month and they all grow back, about how many months would it take to replace ALL her quills?',
+        choices: ['100 months', '300 months', '3,000 months'],
+        correct: 1,
+      },
+      {
+        type: 'choice',
+        question: 'Porcupine quills have backward-facing barbs. Why does this make them so hard to remove once they poke something?',
+        choices: [
+          'The barbs grip tighter when you pull, like a fishhook',
+          'The quills are coated in sticky glue',
+          'The barbs dissolve and make the skin swell',
+        ],
+        correct: 0,
+      },
+    ],
+  },
+  {
+    animalId: 'falcon',
+    bonusXP: 25,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Finnegan dives at 240 miles per hour. A car on the highway goes 60 miles per hour. How many times faster is Finnegan than the car?',
+        choices: ['2 times', '4 times', '6 times'],
+        correct: 1,
+      },
+      {
+        type: 'choice',
+        question: 'Peregrine falcons almost went extinct because of a pesticide called DDT that made their eggshells too thin. Scientists banned DDT and the falcons recovered. What does this teach us?',
+        choices: [
+          'Human actions can both harm and help animal species',
+          'Falcons can adapt to any chemical',
+          'DDT only affects bird eggs, nothing else',
+        ],
+        correct: 0,
+      },
+    ],
+  },
+  {
+    animalId: 'lynx',
+    bonusXP: 30,
+    puzzles: [
+      {
+        type: 'choice',
+        question: 'Luna\'s snowshoe paws are 4 inches wide. A house cat\'s paw is about 1 inch wide. Luna\'s paws spread her weight over how many times more area?',
+        choices: ['8 times', '16 times', '4 times'],
+        correct: 1,
+      },
+      {
+        type: 'choice',
+        question: 'Canada lynx populations rise and fall with snowshoe hare populations. If hares decrease, what do you predict happens to the lynx?',
+        choices: [
+          'Lynx decrease too, because they depend on hares for food',
+          'Lynx increase because there is less competition',
+          'Nothing changes for the lynx',
+        ],
+        correct: 0,
+      },
+    ],
+  },
 ];
 
 export const getPuzzleSet = (animalId: string): AnimalPuzzleSet | undefined =>

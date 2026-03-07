@@ -2,6 +2,7 @@
  * LilaCharacter — SVG-drawn customizable girl sprite.
  * All appearance driven by props (hairColor, skinTone, outfitColor).
  * Optional accessory overlays (hat, held item).
+ * outfitColor may be 'rainbow' for the Rainbow Rain Jacket.
  */
 import React from 'react';
 import Svg, {
@@ -22,7 +23,6 @@ interface LilaCharacterProps {
   equippedHat?: string | null;
   size?: number;
   facing?: 'left' | 'right';
-  walking?: boolean; // future animation hook
 }
 
 export function LilaCharacter({
@@ -40,9 +40,12 @@ export function LilaCharacter({
   const svgH = H * scale;
   const flip = facing === 'left' ? `scale(-1,1) translate(-${W},0)` : undefined;
 
-  // Derived shoe color from outfit
-  const shoeColor = outfitColor;
-  const pantColor = darken(outfitColor, 0.25);
+  // Rainbow outfit special handling
+  const isRainbow = outfitColor === 'rainbow';
+
+  // Derived shoe / pant colors — safe against non-hex 'rainbow' string
+  const shoeColor = isRainbow ? '#FF4444' : outfitColor;
+  const pantColor = isRainbow ? '#7C3AED' : darken(outfitColor, 0.25);
   const skinDark = darken(skinTone, 0.15);
 
   return (
@@ -56,10 +59,21 @@ export function LilaCharacter({
           <Stop offset="0" stopColor={lighten(hairColor, 0.15)} />
           <Stop offset="1" stopColor={hairColor} />
         </LinearGradient>
-        <LinearGradient id="outfitGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={lighten(outfitColor, 0.1)} />
-          <Stop offset="1" stopColor={outfitColor} />
-        </LinearGradient>
+        {isRainbow ? (
+          <LinearGradient id="outfitGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0"    stopColor="#FF4444" />
+            <Stop offset="0.2"  stopColor="#FF8C00" />
+            <Stop offset="0.4"  stopColor="#FFD700" />
+            <Stop offset="0.62" stopColor="#44BB44" />
+            <Stop offset="0.82" stopColor="#4488EE" />
+            <Stop offset="1"    stopColor="#9B59B6" />
+          </LinearGradient>
+        ) : (
+          <LinearGradient id="outfitGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={lighten(outfitColor, 0.1)} />
+            <Stop offset="1" stopColor={outfitColor} />
+          </LinearGradient>
+        )}
       </Defs>
 
       <G transform={flip}>
@@ -70,19 +84,15 @@ export function LilaCharacter({
         {/* ── SHOES ─────────────────────────────────── */}
         <Ellipse cx={38} cy={164} rx={12} ry={8} fill={shoeColor} />
         <Ellipse cx={62} cy={164} rx={12} ry={8} fill={shoeColor} />
-        {/* Shoe shine */}
         <Ellipse cx={35} cy={161} rx={5} ry={2.5} fill="rgba(255,255,255,0.3)" />
         <Ellipse cx={59} cy={161} rx={5} ry={2.5} fill="rgba(255,255,255,0.3)" />
 
         {/* ── BODY / DRESS ────────────────────────────── */}
-        {/* Skirt flare */}
         <Path
           d="M 22,115 Q 30,138 50,138 Q 70,138 78,115 Z"
-          fill={outfitColor}
+          fill={isRainbow ? '#9B59B6' : outfitColor}
         />
-        {/* Torso */}
         <Rect x={28} y={74} width={44} height={48} rx={12} fill="url(#outfitGrad)" />
-        {/* Dress collar detail */}
         <Path
           d="M 38,74 Q 50,84 62,74"
           stroke="rgba(255,255,255,0.5)"
@@ -91,10 +101,8 @@ export function LilaCharacter({
         />
 
         {/* ── ARMS ────────────────────────────────────── */}
-        {/* Right arm */}
         <Rect x={72} y={76} width={14} height={34} rx={7} fill="url(#outfitGrad)" />
         <Circle cx={79} cy={111} r={9} fill="url(#skinGrad)" />
-        {/* Left arm */}
         <Rect x={14} y={76} width={14} height={34} rx={7} fill="url(#outfitGrad)" />
         <Circle cx={21} cy={111} r={9} fill="url(#skinGrad)" />
 
@@ -105,7 +113,6 @@ export function LilaCharacter({
         <Circle cx={50} cy={42} r={28} fill="url(#skinGrad)" />
 
         {/* ── HAIR (back layer) ───────────────────────── */}
-        {/* Back hair that hangs behind */}
         <Path
           d="M 24,32 Q 20,70 22,90 Q 28,95 30,88 Q 26,68 28,36 Z"
           fill="url(#hairGrad)"
@@ -118,22 +125,18 @@ export function LilaCharacter({
         <Circle cx={78} cy={44} r={4} fill={darken(skinTone, 0.08)} />
 
         {/* ── HAIR (front) ────────────────────────────── */}
-        {/* Top / crown */}
         <Path
           d="M 22,36 Q 26,10 50,12 Q 74,10 78,36 Q 74,18 50,16 Q 26,18 22,36 Z"
           fill="url(#hairGrad)"
         />
-        {/* Side swoosh left */}
         <Path
           d="M 22,36 Q 18,42 20,50 Q 24,46 26,40 Z"
           fill="url(#hairGrad)"
         />
-        {/* Ponytail right side */}
         <Path
           d="M 74,30 Q 86,28 88,42 Q 86,54 78,52 Q 80,44 82,38 Q 80,30 74,30 Z"
           fill="url(#hairGrad)"
         />
-        {/* Hair highlight */}
         <Path
           d="M 36,14 Q 50,12 60,15"
           stroke={lighten(hairColor, 0.3)}
@@ -143,19 +146,14 @@ export function LilaCharacter({
         />
 
         {/* ── EYES ────────────────────────────────────── */}
-        {/* Eye whites */}
         <Ellipse cx={40} cy={40} rx={7} ry={6} fill="white" />
         <Ellipse cx={60} cy={40} rx={7} ry={6} fill="white" />
-        {/* Irises */}
         <Circle cx={41} cy={41} r={4.5} fill="#5C4033" />
         <Circle cx={61} cy={41} r={4.5} fill="#5C4033" />
-        {/* Pupils */}
         <Circle cx={42} cy={42} r={2.5} fill="#1A1A1A" />
         <Circle cx={62} cy={42} r={2.5} fill="#1A1A1A" />
-        {/* Eye shine */}
         <Circle cx={43} cy={39} r={1.5} fill="white" />
         <Circle cx={63} cy={39} r={1.5} fill="white" />
-        {/* Eyelashes */}
         <Path d="M 33,36 Q 34,32 36,34" stroke="#2C1810" strokeWidth={1.5} fill="none" strokeLinecap="round" />
         <Path d="M 53,36 Q 55,32 57,34" stroke="#2C1810" strokeWidth={1.5} fill="none" strokeLinecap="round" />
 
@@ -170,7 +168,6 @@ export function LilaCharacter({
           fill="none"
           strokeLinecap="round"
         />
-        {/* Rosy cheeks */}
         <Circle cx={34} cy={50} r={5} fill="rgba(255,150,120,0.25)" />
         <Circle cx={66} cy={50} r={5} fill="rgba(255,150,120,0.25)" />
 
@@ -226,7 +223,6 @@ function StarCap() {
   return (
     <G>
       <Path d="M 24,26 Q 26,4 50,4 Q 74,4 76,26 Q 56,20 50,20 Q 44,20 24,26 Z" fill="#1A237E" />
-      {['⭐'].map((_, i) => null)}
       <Path d="M 36,14 L 38,10 L 40,14 L 36,12 L 40,12 Z" fill="#F9CA24" />
       <Path d="M 48,10 L 50,6 L 52,10 L 48,8 L 52,8 Z" fill="#F9CA24" />
       <Path d="M 60,14 L 62,10 L 64,14 L 60,12 L 64,12 Z" fill="#F9CA24" />

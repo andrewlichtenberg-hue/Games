@@ -15,6 +15,7 @@ import { BigButton } from '../components/ui/BigButton';
 import { C } from '../utils/colors';
 import { ITEMS, GameItem, SlotType } from '../game/items';
 import { useGameStore } from '../store/gameStore';
+import { audioManager } from '../audio/audioManager';
 import type { RootStackParamList } from '../../App';
 
 const { width } = Dimensions.get('window');
@@ -110,7 +111,7 @@ export function WardrobeScreen({ navigation }: Props) {
       if (slot === 'hat') setPreviewHat(item.id);
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    audioSfx('pop');
+    audioManager.playSfx('pop');
   };
 
   // Get current outfit for preview
@@ -163,6 +164,7 @@ export function WardrobeScreen({ navigation }: Props) {
 
       {/* Items grid */}
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}
       >
@@ -179,10 +181,6 @@ export function WardrobeScreen({ navigation }: Props) {
       </ScrollView>
     </LinearGradient>
   );
-}
-
-function audioSfx(_name: string) {
-  // stub — wire to audioManager
 }
 
 const styles = StyleSheet.create({

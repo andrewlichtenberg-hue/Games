@@ -23,6 +23,7 @@ import { C } from '../utils/colors';
 import { getLocationById } from '../game/locations';
 import { getAnimalsForLocation, Animal } from '../game/animals';
 import { getRandomPuzzle } from '../game/puzzles';
+import { getItemById } from '../game/items';
 import { MAX_FRIENDSHIP } from '../game/progression';
 import { useGameStore } from '../store/gameStore';
 import { audioManager } from '../audio/audioManager';
@@ -75,17 +76,23 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const locationAnimals = location ? getAnimalsForLocation(locationId) : [];
 
   const {
-    hairColor, skinTone, outfitColor, equippedHat,
+    hairColor, skinTone, outfitColor, equippedHat, equippedOutfit,
     level, xp, discoveredAnimals, animalFriendship, companionAnimals,
-    ownedPowerups,
+    ownedPowerups, ownedItems,
     gainXP, discoverAnimal, increaseFriendship, visitLocation,
   } = useGameStore();
 
-  // ── Power-up flags ────────────────────────────────────────────
-  const hasBinoculars   = ownedPowerups.includes('powerup-binoculars');
-  const hasRainBoots    = ownedPowerups.includes('powerup-rain-boots');
-  const hasLantern      = ownedPowerups.includes('powerup-lantern');
-  const hasGoldenJournal = ownedPowerups.includes('powerup-journal-upgrade');
+  // Apply equipped outfit's color (handles 'rainbow' and normal hex)
+  const activeOutfitColor = equippedOutfit
+    ? (getItemById(equippedOutfit)?.color ?? outfitColor)
+    : outfitColor;
+
+  // ── Power-up flags — check both ownedPowerups (current) and ownedItems (migration fallback)
+  const hasPowerup = (id: string) => ownedPowerups.includes(id) || ownedItems.includes(id);
+  const hasBinoculars    = hasPowerup('powerup-binoculars');
+  const hasRainBoots     = hasPowerup('powerup-rain-boots');
+  const hasLantern       = hasPowerup('powerup-lantern');
+  const hasGoldenJournal = hasPowerup('powerup-journal-upgrade');
 
   // ── Lila movement ─────────────────────────────────────────────
   const lilaX = useRef(new Animated.Value(width * 0.15)).current;
@@ -99,6 +106,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
 
   // ── Speech bubble ─────────────────────────────────────────────
   const [selectedAnimal, setSelectedAnimal] = useState<SpawnedAnimal | null>(null);
+  const [currentGreeting, setCurrentGreeting] = useState('');
   const bubbleOpacity = useRef(new Animated.Value(0)).current;
 
   // ── Puzzle ────────────────────────────────────────────────────
@@ -248,6 +256,9 @@ export function ExplorationScreen({ route, navigation }: Props) {
     ]).start();
 
     setSelectedAnimal(spawned);
+    setCurrentGreeting(
+      spawned.animal.greetings[Math.floor(Math.random() * spawned.animal.greetings.length)]
+    );
     bubbleOpacity.setValue(0);
     Animated.timing(bubbleOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
   };
@@ -316,11 +327,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     });
   };
 
-  const animalGreeting = selectedAnimal
-    ? selectedAnimal.animal.greetings[
-        Math.floor(Math.random() * selectedAnimal.animal.greetings.length)
-      ]
-    : '';
+  const animalGreeting = currentGreeting;
 
   // ── Render ────────────────────────────────────────────────────
 
@@ -452,7 +459,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
             <LilaCharacter
               hairColor={hairColor}
               skinTone={skinTone}
-              outfitColor={outfitColor}
+              outfitColor={activeOutfitColor}
               equippedHat={equippedHat}
               size={LILA_SIZE}
               facing={lilaFacing}

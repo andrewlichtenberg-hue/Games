@@ -86,7 +86,7 @@ export const ITEMS: GameItem[] = [
     emoji: '🌈',
     description: 'A waterproof jacket with a rainbow stripe. Stay dry AND colorful!',
     unlocksAtLevel: 4,
-    color: '#3498DB',
+    color: 'rainbow',
   },
   {
     id: 'outfit-hiking',
