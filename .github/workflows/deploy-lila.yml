@@ -2,7 +2,7 @@ name: Deploy Lila's Nature Explorer
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'claude/kids-exploration-game-gKkoc']
   workflow_dispatch: # lets you trigger manually from GitHub website
 
 permissions:
