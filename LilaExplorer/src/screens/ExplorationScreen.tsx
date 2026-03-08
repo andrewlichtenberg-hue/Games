@@ -198,7 +198,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
         visitLocation(locationId);
         const track =
           location.sceneType === 'beach' ? 'beach' :
-          location.sceneType === 'forest' ? 'forest' :
+          location.sceneType === 'forest' || location.sceneType === 'jungle' ? 'forest' :
           location.sceneType === 'mountain' ? 'mountain' : 'park';
         audioManager.playMusic(track);
       }

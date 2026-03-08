@@ -212,6 +212,7 @@ function LocationPage({
     location.sceneType === 'park' ? '🌳' :
     location.sceneType === 'beach' ? '🏖️' :
     location.sceneType === 'forest' ? '🌲' :
+    location.sceneType === 'jungle' ? '🌴' :
     location.sceneType === 'mountain' ? '⛰️' : '🏙️';
 
   return (

@@ -1,4 +1,4 @@
-export type SceneType = 'park' | 'beach' | 'forest' | 'mountain' | 'city';
+export type SceneType = 'park' | 'beach' | 'forest' | 'mountain' | 'city' | 'jungle';
 
 export interface Location {
   id: string;
@@ -166,6 +166,51 @@ export const LOCATIONS: Location[] = [
     skyBottom: '#F48FB1',
     groundColor: '#455A64',
     accentColor: '#006064',
+  },
+  {
+    id: 'cancun',
+    name: 'Cancún & Riviera Maya',
+    subtitle: 'Mexico',
+    description: 'Turquoise waters, coral reefs, and lush jungle! Sea turtles nest on the beaches and jaguars prowl the Mayan forest.',
+    unlockLevel: 11,
+    animalIds: ['seaturtle', 'flamingo', 'parrot', 'jaguar'],
+    sceneType: 'jungle',
+    mapX: 0.28,
+    mapY: 0.58,
+    skyTop: '#00BCD4',
+    skyBottom: '#80DEEA',
+    groundColor: '#2E7D32',
+    accentColor: '#F9A825',
+  },
+  {
+    id: 'black-forest',
+    name: 'Black Forest',
+    subtitle: 'Germany',
+    description: 'Ancient dark pines, fairy-tale villages, and misty valleys. Red deer, wild boar, and white storks share these magical woods!',
+    unlockLevel: 12,
+    animalIds: ['reddeer', 'wildboar', 'stork', 'europeanfox'],
+    sceneType: 'forest',
+    mapX: 0.51,
+    mapY: 0.31,
+    skyTop: '#546E7A',
+    skyBottom: '#90A4AE',
+    groundColor: '#1B5E20',
+    accentColor: '#795548',
+  },
+  {
+    id: 'hong-kong',
+    name: 'Hong Kong',
+    subtitle: 'China',
+    description: 'A dazzling city surrounded by wild islands and rainforest! Rare pink dolphins leap in the harbor and pangolins hide in the hills.',
+    unlockLevel: 13,
+    animalIds: ['chinesedolphin', 'macaque', 'blackkite', 'pangolin'],
+    sceneType: 'city',
+    mapX: 0.78,
+    mapY: 0.53,
+    skyTop: '#E91E63',
+    skyBottom: '#F48FB1',
+    groundColor: '#37474F',
+    accentColor: '#FFD600',
   },
 ];
 

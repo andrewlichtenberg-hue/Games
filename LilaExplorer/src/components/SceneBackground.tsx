@@ -66,7 +66,7 @@ export function SceneBackground({
         {/* Scene-specific middle layer */}
         {sceneType === 'park' && <ParkScene W={W} groundY={groundY} accent={accentColor} />}
         {sceneType === 'beach' && <BeachScene W={W} groundY={groundY} accent={accentColor} />}
-        {sceneType === 'forest' && <ForestScene W={W} groundY={groundY} accent={accentColor} />}
+        {(sceneType === 'forest' || sceneType === 'jungle') && <ForestScene W={W} groundY={groundY} accent={accentColor} />}
         {sceneType === 'mountain' && <MountainScene W={W} groundY={groundY} accent={accentColor} />}
         {sceneType === 'city' && <CityScene W={W} groundY={groundY} accent={accentColor} />}
 
@@ -77,7 +77,7 @@ export function SceneBackground({
         <Rect x={0} y={groundY} width={W} height={4} fill={`rgba(255,255,255,0.18)`} />
 
         {/* Foreground grass tufts (park/forest) */}
-        {(sceneType === 'park' || sceneType === 'forest') && (
+        {(sceneType === 'park' || sceneType === 'forest' || sceneType === 'jungle') && (
           <GrassTufts W={W} groundY={groundY} color={accentColor} />
         )}
         {/* Foreground sand ripples (beach) */}

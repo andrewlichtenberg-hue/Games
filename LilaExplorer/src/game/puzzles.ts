@@ -546,6 +546,157 @@ export const ANIMAL_PUZZLES: AnimalPuzzleSet[] = [
       { type: 'choice', question: 'Flo\'s light converts 95% of energy to light and only 5% to heat. A regular bulb converts only 10% to light and 90% to heat. How much more efficient is Flo?', choices: ['5 times more efficient', '9.5 times more efficient', '2 times more efficient'], correct: 1 },
     ],
   },
+
+  // ── Cancún & Riviera Maya ────────────────────────────────────────────────────
+  {
+    animalId: 'seaturtle',
+    bonusXP: 22,
+    puzzles: [
+      { type: 'choice', question: 'Marina swims 1,400 miles to reach her nesting beach. If she swims 70 miles per day, how many days does her journey take?', choices: ['14 days', '20 days', '28 days'], correct: 1 },
+      { type: 'choice', question: 'Green sea turtles can hold their breath for up to 7 hours while sleeping. If you sleep 8 hours and breathe every few seconds, about how many breaths do you take in 7 hours? (Hint: about 15 breaths per minute)', choices: ['Around 500', 'Around 6,300', 'Around 1,000'], correct: 1 },
+      { type: 'truefalse', statement: 'Sea turtle eggs are always the same temperature — the temperature of the nest does NOT affect whether the baby is male or female.', isTrue: false },
+      { type: 'which', question: 'Sea turtles are reptiles that breathe air. Which other animal is a reptile that lives mainly in the ocean?', choices: ['🦎', '🐬', '🦈'], correct: 0 },
+      { type: 'choice', question: 'A sea turtle lays 110 eggs per nest and nests 5 times per season. How many eggs does she lay in one season?', choices: ['450 eggs', '550 eggs', '600 eggs'], correct: 1 },
+      { type: 'choice', question: 'Only about 1 in 1,000 sea turtle hatchlings survives to adulthood. If 550 eggs hatch, about how many will grow up?', choices: ['About half', 'Less than 1', 'About 55'], correct: 1 },
+    ],
+  },
+  {
+    animalId: 'flamingo',
+    bonusXP: 20,
+    puzzles: [
+      { type: 'choice', question: 'Flamingos are born grey. Flora eats shrimp that contain pink pigment called carotenoids. If she stops eating shrimp, what do you predict happens to her color?', choices: ['She fades back to grey over time', 'She stays pink forever', 'She turns red'], correct: 0 },
+      { type: 'choice', question: 'A flamingo colony has 800 birds. If 3 out of every 4 birds stand on one leg at a time, how many are on two legs?', choices: ['200 birds', '400 birds', '600 birds'], correct: 0 },
+      { type: 'truefalse', statement: 'Flamingos can only live in warm tropical places — they cannot survive in cold climates at all.', isTrue: false },
+      { type: 'which', question: 'Flamingos eat by filtering water through their upside-down beaks, catching tiny creatures. Which whale uses a similar filtering method?', choices: ['🐳', '🦈', '🐬'], correct: 0 },
+      { type: 'choice', question: 'Flora stands on one leg for 4 hours. Scientists think this saves body heat. If standing on two legs loses heat at 10 units/hour and one leg loses 6 units/hour, how many heat units does she save in 4 hours?', choices: ['8 units', '16 units', '24 units'], correct: 1 },
+      { type: 'choice', question: 'Flamingos fly at 35 mph and can travel 375 miles in one night. How many hours do they fly?', choices: ['8 hours', '10 hours', '12 hours'], correct: 1 },
+    ],
+  },
+  {
+    animalId: 'parrot',
+    bonusXP: 18,
+    puzzles: [
+      { type: 'choice', question: 'Pablo knows 50 words in Spanish and is learning English. If he learns 5 new English words a week, how many English words will he know after 6 weeks?', choices: ['25 words', '30 words', '35 words'], correct: 1 },
+      { type: 'choice', question: 'Scientists found that an African Grey parrot named Alex understood the concept of zero. Why is understanding "zero" impressive for an animal?', choices: ['Zero is an abstract concept that requires complex thinking', 'Zero is the most important number in math', 'Animals only understand numbers they can see'], correct: 0 },
+      { type: 'truefalse', statement: 'Parrots just copy sounds randomly — they have no understanding of the words they say.', isTrue: false },
+      { type: 'which', question: 'Parrots use their feet like hands to hold food. Which other bird also uses its feet to manipulate objects?', choices: ['🦅', '🐦', '🦆'], correct: 0 },
+      { type: 'choice', question: 'A parrot can live 80 years — longer than many humans! If Pablo was born when your parents were 5 years old and they are now 35, how old is Pablo?', choices: ['25 years old', '30 years old', '40 years old'], correct: 1 },
+      { type: 'choice', question: 'Pablo eats 12 berries in the morning and 18 in the afternoon. He shares 8 with his flock. How many berries did he keep for himself?', choices: ['22 berries', '20 berries', '14 berries'], correct: 0 },
+    ],
+  },
+  {
+    animalId: 'jaguar',
+    bonusXP: 30,
+    puzzles: [
+      { type: 'choice', question: 'A jaguar\'s bite force is 2,000 pounds per square inch — about twice that of a lion. If a lion\'s bite is 1,000 psi, and Jade\'s is twice that, what is Jade\'s bite force?', choices: ['1,500 psi', '2,000 psi', '3,000 psi'], correct: 1 },
+      { type: 'choice', question: 'Jaguars are the only big cats in the Americas. The Mayan word for jaguar is "balam" and the Aztec word is "ocelotl." What does learning animal names in different cultures teach us?', choices: ['Animals have always been important to many different civilizations', 'Only ancient cultures cared about jaguars', 'Animal names in other languages are just translations of English'], correct: 0 },
+      { type: 'truefalse', statement: 'Like lions and tigers, jaguars are afraid of water and avoid swimming.', isTrue: false },
+      { type: 'which', question: 'Jaguars have spots inside rings called rosettes. Which other big cat has a similar spotted pattern?', choices: ['🐆', '🐅', '🦁'], correct: 0 },
+      { type: 'choice', question: 'Jade\'s territory is 50 square miles. If the whole Yucatán Peninsula is 75,000 square miles, about how many jaguar territories could fit in it?', choices: ['500', '1,000', '1,500'], correct: 2 },
+      { type: 'choice', question: 'Jaguars are apex predators — nothing hunts them. Scientists found that when jaguars disappeared from an area, deer populations grew 400%. What does this tell us about food chains?', choices: ['Predators control the populations of animals below them in the food chain', 'More deer is always better for ecosystems', 'Removing predators makes no difference'], correct: 0 },
+    ],
+  },
+
+  // ── Black Forest, Germany ────────────────────────────────────────────────────
+  {
+    animalId: 'reddeer',
+    bonusXP: 20,
+    puzzles: [
+      { type: 'choice', question: 'Rudolf\'s antlers grow 1 inch every 2 days in spring. How many inches do they grow in the month of June (30 days)?', choices: ['10 inches', '15 inches', '20 inches'], correct: 1 },
+      { type: 'choice', question: 'Red deer shed and regrow their antlers every year. Antlers are the fastest-growing tissue in any mammal. Why might it be useful for antlers to grow very quickly each spring?', choices: ['Stags need large antlers before mating season in autumn', 'Antlers help deer see better in summer', 'Antlers keep deer warm in winter'], correct: 0 },
+      { type: 'truefalse', statement: 'Both male and female red deer grow antlers.', isTrue: false },
+      { type: 'which', question: 'Red deer eat grasses and leaves in summer but strip bark from trees in winter. What do we call animals that change their diet by season?', choices: ['Opportunistic feeders', 'Carnivores', 'Insectivores'], correct: 0 },
+      { type: 'choice', question: 'A herd of red deer has 24 animals. If 1 in 4 are adult stags with large antlers, how many stags are in the herd?', choices: ['4 stags', '6 stags', '8 stags'], correct: 1 },
+      { type: 'choice', question: 'Rudolf weighs 400 pounds and can run at 37 mph. If he runs for 3 minutes at top speed, how many miles does he cover? (Hint: 37 mph ÷ 60 × 3)', choices: ['About 1.5 miles', 'About 1.85 miles', 'About 3 miles'], correct: 1 },
+    ],
+  },
+  {
+    animalId: 'wildboar',
+    bonusXP: 16,
+    puzzles: [
+      { type: 'choice', question: 'Bruno digs up 14 truffles in the morning and 9 in the afternoon. He eats 8 and saves the rest. How many truffles did he save?', choices: ['13 truffles', '15 truffles', '17 truffles'], correct: 1 },
+      { type: 'choice', question: 'Wild boar tusks grow continuously throughout their life. A 5-year-old boar has 4-inch tusks that grow 1 inch per year. How long will the tusks be when the boar is 8 years old?', choices: ['6 inches', '7 inches', '8 inches'], correct: 1 },
+      { type: 'truefalse', statement: 'Wild boars are solitary animals that always live alone.', isTrue: false },
+      { type: 'which', question: 'Wild boars are related to domestic pigs. Which other farm animal has a wild ancestor that still lives in forests?', choices: ['🐄', '🐓', '🐟'], correct: 1 },
+      { type: 'choice', question: 'A wild boar can smell food buried 10 inches underground. A human can smell things from about 1 inch away. How many times better is the boar\'s sense of smell for underground food?', choices: ['5 times', '10 times', '100 times'], correct: 1 },
+      { type: 'choice', question: 'Truffle-hunting pigs find 3 truffles per hour. A trained dog finds 5 per hour. Over a 4-hour search, how many MORE truffles does the dog find?', choices: ['4 more', '8 more', '12 more'], correct: 1 },
+    ],
+  },
+  {
+    animalId: 'stork',
+    bonusXP: 20,
+    puzzles: [
+      { type: 'choice', question: 'Hilde flies 12,000 miles to Africa each year and 12,000 miles back. How many total miles does she fly on migration every year?', choices: ['12,000 miles', '18,000 miles', '24,000 miles'], correct: 2 },
+      { type: 'choice', question: 'White storks have nested on the same chimney for 30 years. Each year they add sticks and the nest grows heavier. Why do scientists say this is an example of "cultural memory"?', choices: ['Knowledge of the nest location is passed from parents to offspring over generations', 'Storks read maps and remember routes by culture', 'The chimney magically attracts storks every year'], correct: 0 },
+      { type: 'truefalse', statement: 'White storks are completely silent — they make no sound at all.', isTrue: false },
+      { type: 'which', question: 'Storks are symbols of good luck in Germany and are said to bring babies. Which other animal is a symbol of good luck in many cultures?', choices: ['🐟', '🦔', '🐛'], correct: 0 },
+      { type: 'choice', question: 'A stork nest adds about 2 pounds of sticks per year. After 15 years, how heavy could the nest become?', choices: ['20 pounds', '30 pounds', '45 pounds'], correct: 1 },
+      { type: 'choice', question: 'White storks soar on thermal air currents to save energy during migration. If a stork using thermals uses 40% less energy than one that flaps constantly, and flapping burns 100 calories/hour, how many calories does soaring save per hour?', choices: ['20 calories', '40 calories', '60 calories'], correct: 1 },
+    ],
+  },
+  {
+    animalId: 'europeanfox',
+    bonusXP: 14,
+    puzzles: [
+      { type: 'choice', question: 'Frieda\'s home territory is 2 square miles in the forest. A city fox\'s territory is only 0.5 square miles. How many times bigger is Frieda\'s forest territory?', choices: ['2 times', '3 times', '4 times'], correct: 2 },
+      { type: 'choice', question: 'Foxes have been found living on every continent except Antarctica. What does this tell us about foxes as a species?', choices: ['Foxes are highly adaptable and can survive in many different environments', 'Foxes prefer cold climates', 'Humans brought foxes to new continents on purpose'], correct: 0 },
+      { type: 'truefalse', statement: 'European red foxes have been introduced to Australia, where they have no natural predators and have become an invasive species.', isTrue: true },
+      { type: 'which', question: 'Foxes use Earth\'s magnetic field to hunt mice under snow. Which technology also uses Earth\'s magnetic field?', choices: ['🧭', '📱', '🔦'], correct: 0 },
+      { type: 'choice', question: 'Frieda has 5 kits (baby foxes). She catches 3 mice per kit per day. How many mice does she need to catch each day?', choices: ['12 mice', '15 mice', '18 mice'], correct: 1 },
+      { type: 'choice', question: 'A fox makes 28 different sounds to communicate. A dog makes about 10. How many MORE sounds does the fox make?', choices: ['14 sounds', '18 sounds', '28 sounds'], correct: 1 },
+    ],
+  },
+
+  // ── Hong Kong, China ─────────────────────────────────────────────────────────
+  {
+    animalId: 'chinesedolphin',
+    bonusXP: 30,
+    puzzles: [
+      { type: 'choice', question: 'Pearl\'s species has fewer than 2,500 individuals left. Scientists counted 47 in Hong Kong waters. What fraction of the total population is in Hong Kong?', choices: ['About 1 in 53', 'About 1 in 100', 'About 1 in 10'], correct: 0 },
+      { type: 'choice', question: 'Chinese white dolphins change color three times in their life: grey → spotted → pink. If a dolphin lives 40 years and spends equal time in each color phase, how many years in each phase?', choices: ['About 10 years', 'About 13 years', 'About 15 years'], correct: 1 },
+      { type: 'truefalse', statement: 'The pink color of Chinese white dolphins comes from blood vessels under thin skin, not from pigment like a flamingo.', isTrue: true },
+      { type: 'which', question: 'Pearl lives next to one of the world\'s busiest shipping ports. Noise pollution from ships affects her echolocation. Which other animal relies on echolocation to navigate?', choices: ['🦇', '🐘', '🦅'], correct: 0 },
+      { type: 'choice', question: 'Pearl\'s pod catches 35 fish in the morning. Two dolphins eat 8 fish each. How many fish are left for the rest of the pod?', choices: ['17 fish', '19 fish', '21 fish'], correct: 1 },
+      { type: 'choice', question: 'Scientists use photo-ID to track dolphins by their unique dorsal fins — like a fingerprint. If researchers photograph 200 dolphins but 15 appear in photos twice, how many unique individuals were found?', choices: ['170', '185', '200'], correct: 1 },
+    ],
+  },
+  {
+    animalId: 'macaque',
+    bonusXP: 22,
+    puzzles: [
+      { type: 'choice', question: 'Ming\'s troop has 40 members. If each macaque grooms 3 others per day for social bonding, and each grooming session takes 10 minutes, how many total minutes of grooming happens in the troop each day?', choices: ['120 minutes', '400 minutes', '1,200 minutes'], correct: 2 },
+      { type: 'choice', question: 'Rhesus macaques were the first primates in space. Scientists studied them to understand how space travel affects the body. Why do scientists prefer to study animals that are biologically similar to humans?', choices: ['The results are more likely to apply to human health', 'It is cheaper than studying humans', 'Animals are better astronauts than humans'], correct: 0 },
+      { type: 'truefalse', statement: 'The "Rh factor" in human blood types (Rh+ and Rh-) was named after rhesus macaques, where it was first discovered.', isTrue: true },
+      { type: 'which', question: 'Macaques live in strict social hierarchies. Which other animal also lives in a strict social ranking system?', choices: ['🐺', '🐠', '🦋'], correct: 0 },
+      { type: 'choice', question: 'A macaque troop moves 2 miles through the forest each day looking for food. Over 5 days, how far has the troop traveled?', choices: ['7 miles', '10 miles', '14 miles'], correct: 1 },
+      { type: 'choice', question: 'Macaques in Japan have been observed washing food in the ocean and even soaking in hot springs — behaviors not seen anywhere else. What do scientists call behaviors learned and shared within a group but not instinctual?', choices: ['Animal culture', 'Instinct', 'Migration'], correct: 0 },
+    ],
+  },
+  {
+    animalId: 'blackkite',
+    bonusXP: 16,
+    puzzles: [
+      { type: 'choice', question: 'Hong Kong has 4,000 black kites in an area of 426 square miles. About how many kites are there per square mile?', choices: ['About 5', 'About 9', 'About 15'], correct: 1 },
+      { type: 'choice', question: 'Black kites soar on rising columns of warm air called thermals. If a thermal lifts Kai 1,000 feet in 2 minutes, and she needs to reach 4,000 feet, how many minutes will it take?', choices: ['4 minutes', '8 minutes', '16 minutes'], correct: 1 },
+      { type: 'truefalse', statement: 'Black kites are scavengers that also hunt — they eat fish, insects, and scraps of food from city markets.', isTrue: true },
+      { type: 'which', question: 'Black kites use their forked tail for steering in flight. Which human invention also uses a forked tail for stability?', choices: ['✈️', '🚗', '⛵'], correct: 0 },
+      { type: 'choice', question: 'Kai spots a fish from 500 feet above and dives to catch it. If she falls at roughly 45 mph, about how many seconds does her dive take? (45 mph ≈ 66 feet per second)', choices: ['About 5 seconds', 'About 7 seconds', 'About 15 seconds'], correct: 1 },
+      { type: 'choice', question: 'Kai shares the Hong Kong sky with airplanes landing at the airport. Scientists found kites avoid the flight paths 94% of the time. What does this tell us about animal behavior near cities?', choices: ['Wild animals can learn to adapt to human infrastructure', 'Kites are afraid of planes', 'Animals always leave areas near airports'], correct: 0 },
+    ],
+  },
+  {
+    animalId: 'pangolin',
+    bonusXP: 32,
+    puzzles: [
+      { type: 'choice', question: 'Ping\'s tongue is 16 inches long — longer than her 14-inch body. If she can flick it in and out 160 times per minute, how many times does she flick it in 30 seconds?', choices: ['60 times', '80 times', '120 times'], correct: 1 },
+      { type: 'choice', question: 'Pangolins eat 20,000 ants and termites per day. If an ant colony has 500,000 workers, how many days would it take Ping to eat the whole colony?', choices: ['15 days', '25 days', '50 days'], correct: 1 },
+      { type: 'truefalse', statement: 'Pangolin scales are made of the same material as rhino horns and human fingernails: a protein called keratin.', isTrue: true },
+      { type: 'which', question: 'Pangolins roll into a tight ball when threatened, using their scales as armor. Which other animal also rolls into a defensive ball?', choices: ['🦔', '🐢', '🦎'], correct: 0 },
+      { type: 'choice', question: 'Pangolins are the world\'s most trafficked mammal. If 200,000 are illegally traded per year and the global population is estimated at 1,000,000, what percentage is removed each year?', choices: ['10%', '20%', '40%'], correct: 1 },
+      { type: 'choice', question: 'A wildlife conservation group rescued 48 pangolins from illegal traders. They released 36 into protected forest. What fraction of the rescued pangolins were released?', choices: ['1/2', '2/3', '3/4'], correct: 2 },
+    ],
+  },
+
 ];
 
 export const getPuzzleSet = (animalId: string): AnimalPuzzleSet | undefined =>
