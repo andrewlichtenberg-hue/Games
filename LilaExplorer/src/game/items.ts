@@ -201,6 +201,15 @@ export const ITEMS: GameItem[] = [
 
   // ── Furniture ─────────────────────────────────────────────────
   {
+    id: 'furn-bed',
+    name: 'Cozy Explorer Bed',
+    type: 'furniture',
+    slot: 'furniture',
+    emoji: '🛏️',
+    description: 'A snuggly bed with a nature-print blanket and fluffy pillows. Every explorer needs a good rest!',
+    unlocksAtLevel: 1,
+  },
+  {
     id: 'furn-lamp',
     name: 'Cozy Lamp',
     type: 'furniture',

@@ -18,6 +18,7 @@ import { AnimalSprite } from '../components/AnimalSprite';
 import { SpeechBubble } from '../components/SpeechBubble';
 import { PuzzleModal } from '../components/PuzzleModal';
 import { XPBar } from '../components/XPBar';
+import { BattleModal } from '../components/BattleModal';
 import { BigButton } from '../components/ui/BigButton';
 import { C } from '../utils/colors';
 import { getLocationById } from '../game/locations';
@@ -149,6 +150,32 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const [xpGained, setXpGained] = useState(0);
   const [showSessionEnd, setShowSessionEnd] = useState(false);
 
+  // ── Battle ────────────────────────────────────────────────────
+  const [showBattle, setShowBattle] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<'back' | 'home' | null>(null);
+
+  const handleLeave = (dest: 'back' | 'home') => {
+    if (sessionFinds > 0) {
+      setPendingNavigation(dest);
+      setShowBattle(true);
+    } else {
+      dest === 'back' ? navigation.goBack() : navigation.navigate('Home');
+    }
+  };
+
+  const handleBattleVictory = (bonusXP: number) => {
+    gainXP(bonusXP);
+    setShowBattle(false);
+    if (pendingNavigation === 'back') navigation.goBack();
+    else navigation.navigate('Home');
+  };
+
+  const handleBattleSkip = () => {
+    setShowBattle(false);
+    if (pendingNavigation === 'back') navigation.goBack();
+    else navigation.navigate('Home');
+  };
+
   // ── Binoculars: zoom in the bonus animal after mount ──────────
   useEffect(() => {
     if (!hasBinoculars) return;
@@ -235,11 +262,12 @@ export function ExplorationScreen({ route, navigation }: Props) {
 
   const tryIncreaseFriendship = (animal: Animal, extraBoost = false) => {
     const current = animalFriendship[animal.id] ?? 0;
+    const threshold = animal.companionThreshold ?? MAX_FRIENDSHIP;
     const alreadyCompanion = companionAnimals.includes(animal.id);
-    increaseFriendship(animal.id);
-    if (extraBoost) increaseFriendship(animal.id);
+    increaseFriendship(animal.id, threshold);
+    if (extraBoost) increaseFriendship(animal.id, threshold);
     const newLevel = Math.min(current + (extraBoost ? 2 : 1), MAX_FRIENDSHIP);
-    if (newLevel >= MAX_FRIENDSHIP && !alreadyCompanion) {
+    if (newLevel >= threshold && !alreadyCompanion) {
       setTimeout(() => {
         showCompanionToast(animal.name.split(' ')[0]);
         audioManager.playSfx('friendship');
@@ -348,7 +376,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => handleLeave('back')} style={styles.backBtn}>
           <Text style={styles.backText}>← Map</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -533,7 +561,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
             />
             <BigButton
               label="Go Home"
-              onPress={() => navigation.navigate('Home')}
+              onPress={() => handleLeave('home')}
               color="purple"
               size="small"
               style={{ flex: 1 }}
@@ -608,6 +636,16 @@ export function ExplorationScreen({ route, navigation }: Props) {
           onDismiss={handlePuzzleDismiss}
         />
       )}
+
+      {/* Battle modal — triggered when leaving after finding animals */}
+      <BattleModal
+        visible={showBattle}
+        locationId={locationId}
+        locationName={location?.name ?? ''}
+        companionAnimals={companionAnimals}
+        onVictory={handleBattleVictory}
+        onSkip={handleBattleSkip}
+      />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import { getItemsForLevel } from './items';
 
 export const MAX_LEVEL = 10;
-export const MAX_FRIENDSHIP = 3;
+export const MAX_FRIENDSHIP = 5;
 
 // XP required to reach each level (index = level, value = total XP needed)
 export const XP_THRESHOLDS = [

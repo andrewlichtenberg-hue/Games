@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
 import { LilaCharacter } from '../components/LilaCharacter';
+import { FurnitureSprite } from '../components/FurnitureSprite';
 import { AnimalSprite } from '../components/AnimalSprite';
 import { C } from '../utils/colors';
 import { useGameStore } from '../store/gameStore';
@@ -108,7 +109,7 @@ export function RoomScreen({ navigation }: Props) {
             const pos = FURNITURE_SLOTS[i % FURNITURE_SLOTS.length];
             return (
               <View key={furnId} style={[styles.furnItem, pos]}>
-                <Text style={styles.furnEmoji}>{item.emoji}</Text>
+                <FurnitureSprite furnId={furnId} size={60} />
                 <Text style={styles.furnName}>{item.name}</Text>
               </View>
             );
@@ -276,7 +277,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 2,
   },
-  furnEmoji: { fontSize: 34 },
   furnName: {
     fontSize: 9,
     fontWeight: '700',

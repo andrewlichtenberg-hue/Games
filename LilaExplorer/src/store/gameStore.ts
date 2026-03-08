@@ -15,6 +15,7 @@ const POWERUP_IDS = [
 ];
 
 const FURNITURE_IDS = [
+  'furn-bed',
   'furn-lamp',
   'furn-poster',
   'furn-bookshelf',
@@ -24,7 +25,7 @@ const FURNITURE_IDS = [
 
 const MAX_ACTIVE_POWERUPS = 2;
 const MAX_EQUIPPED_ACCESSORIES = 2;
-const MAX_FURNITURE = 5;
+const MAX_FURNITURE = 6;
 
 export interface GameState {
   // ── Player identity ─────────────────────────────────────────
@@ -71,7 +72,7 @@ export interface GameState {
   gainXP: (amount: number) => void;
   clearPendingLevelUp: () => void;
   discoverAnimal: (animalId: string) => void;
-  increaseFriendship: (animalId: string) => void;
+  increaseFriendship: (animalId: string, threshold?: number) => void;
   visitLocation: (locationId: string) => void;
   claimLocationBonus: (locationId: string, xp: number) => void;
   equipItem: (itemId: string, slot: 'hat' | 'outfit' | 'accessory') => void;
@@ -84,7 +85,7 @@ export interface GameState {
 }
 
 const DEFAULT_UNLOCKED = ['prospect-park'];
-const DEFAULT_OWNED_ITEMS = ['hat-explorer', 'outfit-garden'];
+const DEFAULT_OWNED_ITEMS = ['hat-explorer', 'outfit-garden', 'furn-bed'];
 
 const INITIAL_STATE = {
   playerName: '',
@@ -107,7 +108,7 @@ const INITIAL_STATE = {
   equippedAccessories: [] as string[],
   ownedPowerups: [] as string[],
   activePowerups: [] as string[],
-  equippedFurniture: [] as string[],
+  equippedFurniture: ['furn-bed'] as string[],
   journalEntries: [] as string[],
   claimedLocationBonuses: [] as string[],
   dailyStreak: 0,
@@ -197,13 +198,14 @@ export const useGameStore = create<GameState>()(
         }
       },
 
-      increaseFriendship: (animalId) => {
+      increaseFriendship: (animalId, threshold?) => {
         const { animalFriendship, companionAnimals } = get();
         const current = animalFriendship[animalId] ?? 0;
         const next = Math.min(current + 1, MAX_FRIENDSHIP);
+        const promotionThreshold = threshold ?? MAX_FRIENDSHIP;
         const newFriendship = { ...animalFriendship, [animalId]: next };
         const newCompanions =
-          next >= MAX_FRIENDSHIP && !companionAnimals.includes(animalId)
+          next >= promotionThreshold && !companionAnimals.includes(animalId)
             ? [...companionAnimals, animalId]
             : companionAnimals;
         set({ animalFriendship: newFriendship, companionAnimals: newCompanions });
@@ -335,6 +337,7 @@ export const useGameStore = create<GameState>()(
 
         // Defaults for new fields
         if (!state.equippedFurniture) state.equippedFurniture = [];
+        if (!state.equippedFurniture.includes('furn-bed') && state.equippedFurniture.length < 6) { state.equippedFurniture = ['furn-bed', ...state.equippedFurniture]; }
         if (!state.locationVisitCounts) state.locationVisitCounts = {};
         if (state.dailyStreak == null) state.dailyStreak = 0;
         if (state.lastPlayDate == null) state.lastPlayDate = null;

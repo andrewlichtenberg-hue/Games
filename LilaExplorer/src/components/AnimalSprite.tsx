@@ -387,7 +387,7 @@ const ANIMAL_RENDERERS: Partial<Record<AnimalType, Renderer>> = {
 };
 
 // Stub renderers for remaining types (friendly blobs with face)
-const STUB_TYPES: AnimalType[] = ['robin','sparrow','hawk','seagull','sandpiper','beachcat','chipmunk','beaver','heron','groundhog','firefly','seal','plover','coyote','porcupine','falcon','lynx','turtle'];
+const STUB_TYPES: AnimalType[] = ['robin','sparrow','hawk','seagull','sandpiper','beachcat','chipmunk','beaver','heron','groundhog','firefly','seal','plover','coyote','porcupine','falcon','lynx','turtle','pelican','dolphin','woodpecker','turkey','hummingbird','bluebird','skunk','bobcat','loon','wolf','whale','eagle'];
 STUB_TYPES.forEach((t) => {
   if (!ANIMAL_RENDERERS[t]) {
     ANIMAL_RENDERERS[t] = ({ body, accent }) => (

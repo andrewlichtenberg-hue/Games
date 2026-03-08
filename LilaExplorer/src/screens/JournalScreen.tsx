@@ -50,7 +50,8 @@ function AnimalDetailModal({
   onClose: () => void;
 }) {
   if (!animal) return null;
-  const hearts = Array.from({ length: 3 }, (_, i) =>
+  const threshold = animal.companionThreshold ?? 3;
+  const hearts = Array.from({ length: threshold }, (_, i) =>
     i < friendshipLevel ? '❤️' : '🤍'
   );
 
@@ -130,7 +131,7 @@ function AnimalCard({
           </Text>
           {isCompanion && <Text style={styles.companionBadge}>🏠</Text>}
           <View style={styles.heartsRow}>
-            {Array.from({ length: 3 }, (_, i) => (
+            {Array.from({ length: animal.companionThreshold ?? 3 }, (_, i) => (
               <Text key={i} style={styles.heartTiny}>
                 {i < friendshipLevel ? '❤️' : '🤍'}
               </Text>
@@ -367,7 +368,7 @@ export function JournalScreen({ navigation }: Props) {
                 animal={animal}
                 discovered={discoveredAnimals.includes(animal.id)}
                 isCompanion={companionAnimals.includes(animal.id)}
-                friendshipLevel={Math.min(animalFriendship[animal.id] ?? 0, 3)}
+                friendshipLevel={Math.min(animalFriendship[animal.id] ?? 0, animal.companionThreshold ?? 3)}
                 onPress={() => {
                   if (discoveredAnimals.includes(animal.id)) setSelectedAnimal(animal);
                 }}
@@ -381,7 +382,7 @@ export function JournalScreen({ navigation }: Props) {
       {/* Detail modal */}
       <AnimalDetailModal
         animal={selectedAnimal}
-        friendshipLevel={Math.min(animalFriendship[selectedAnimal?.id ?? ''] ?? 0, 3)}
+        friendshipLevel={Math.min(animalFriendship[selectedAnimal?.id ?? ''] ?? 0, selectedAnimal?.companionThreshold ?? 3)}
         isCompanion={companionAnimals.includes(selectedAnimal?.id ?? '')}
         visible={selectedAnimal !== null}
         onClose={() => setSelectedAnimal(null)}
