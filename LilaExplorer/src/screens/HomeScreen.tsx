@@ -116,7 +116,7 @@ export function HomeScreen({ navigation }: Props) {
           {/* Companion room */}
           <View style={styles.roomSection}>
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>🏡 Lila's Room</Text>
+              <Text style={styles.sectionTitle}>🏡 {playerName}'s Room</Text>
               {dailyStreak > 1 && (
                 <View style={styles.streakBadge}>
                   <Text style={styles.streakText}>🔥 Day {dailyStreak}</Text>

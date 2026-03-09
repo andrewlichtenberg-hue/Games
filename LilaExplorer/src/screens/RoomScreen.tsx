@@ -81,7 +81,7 @@ export function RoomScreen({ navigation }: Props) {
           <Text style={styles.backText}>← Home</Text>
         </TouchableOpacity>
         <View>
-          <Text style={styles.title}>🏡 Lila's Room</Text>
+          <Text style={styles.title}>🏡 {playerName}'s Room</Text>
           <Text style={styles.subtitle}>{playerName}'s cozy hideout</Text>
         </View>
       </View>

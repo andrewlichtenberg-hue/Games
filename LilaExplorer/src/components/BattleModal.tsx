@@ -202,7 +202,7 @@ const HOME_TURF_BONUS = 15;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type BattlePhase = 'choose' | 'fight' | 'victory';
+type BattlePhase = 'choose' | 'fight' | 'rescue' | 'victory';
 
 interface LogEntry {
   text: string;
@@ -229,6 +229,7 @@ export function BattleModal({
 }: BattleModalProps) {
   const [phase, setPhase] = useState<BattlePhase>('choose');
   const [selectedCompanionId, setSelectedCompanionId] = useState<string | null>(null);
+  const [rescueAnimalId, setRescueAnimalId] = useState<string | null>(null);
   const [playerHP, setPlayerHP] = useState(PLAYER_MAX_HP);
   const [enemyHP, setEnemyHP] = useState(ENEMY_MAX_HP);
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -249,6 +250,7 @@ export function BattleModal({
     if (visible) {
       setPhase('choose');
       setSelectedCompanionId(null);
+      setRescueAnimalId(null);
       setPlayerHP(PLAYER_MAX_HP);
       setEnemyHP(ENEMY_MAX_HP);
       setLog([]);
@@ -339,14 +341,29 @@ export function BattleModal({
     // Enemy counter-attacks after a delay
     setTimeout(() => {
       const taunt = enemy.taunts[Math.floor(Math.random() * enemy.taunts.length)];
-      const newPlayerHP = Math.max(0, playerHP - ENEMY_DAMAGE);
-      setPlayerHP(newPlayerHP);
+      const newPlayerHP = playerHP - ENEMY_DAMAGE;
       shakeTarget(playerShake);
       addLog(`${enemy.name}: "${taunt}" (-${ENEMY_DAMAGE} HP)`, '#FCA5A5');
 
-      setTimeout(() => setBusy(false), 300);
+      if (newPlayerHP <= 0) {
+        // Rescue! Pick a random companion to swoop in
+        const others = companionAnimals.filter((id) => id !== selectedCompanionId);
+        const rescuer = others.length > 0
+          ? others[Math.floor(Math.random() * others.length)]
+          : selectedCompanionId;
+        setRescueAnimalId(rescuer ?? null);
+        setPlayerHP(PLAYER_MAX_HP); // fully restored by rescue
+        setTimeout(() => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setPhase('rescue');
+          setBusy(false);
+        }, 400);
+      } else {
+        setPlayerHP(newPlayerHP);
+        setTimeout(() => setBusy(false), 300);
+      }
     }, 700);
-  }, [busy, enemyHP, playerHP, selectedCompanionId, enemy, playerShake, enemyShake, flashAnim, movePopAnim]);
+  }, [busy, enemyHP, playerHP, selectedCompanionId, companionAnimals, enemy, playerShake, enemyShake, flashAnim, movePopAnim]);
 
   function handleVictory() {
     onVictory(BASE_XP + (homeTurfBonus ? HOME_TURF_BONUS : 0));
@@ -355,6 +372,7 @@ export function BattleModal({
   // ── Derived values ─────────────────────────────────────────────────────────
 
   const selectedAnimal = selectedCompanionId ? getAnimalById(selectedCompanionId) : null;
+  const rescueAnimal   = rescueAnimalId     ? getAnimalById(rescueAnimalId)     : null;
   const moves = selectedCompanionId ? getMovesFor(selectedCompanionId) : GENERIC_MOVES;
   const totalXP = BASE_XP + (homeTurfBonus ? HOME_TURF_BONUS : 0);
   const playerHPPct = (playerHP / PLAYER_MAX_HP) * 100;
@@ -511,6 +529,53 @@ export function BattleModal({
 
               <TouchableOpacity onPress={onSkip} style={styles.skipLink}>
                 <Text style={styles.skipLinkText}>Flee battle</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── RESCUE phase ────────────────────────────────────────── */}
+          {phase === 'rescue' && (
+            <View style={styles.phaseContainer}>
+              <Text style={styles.rescueTitle}>🌟 Friends to the Rescue!</Text>
+              <Text style={styles.rescueSubtitle}>
+                {selectedAnimal?.name.split(' ')[0] ?? 'Your friend'} was in trouble…
+              </Text>
+
+              {rescueAnimal ? (
+                <View style={styles.rescueHeroBox}>
+                  <AnimalSprite
+                    type={rescueAnimal.type} size={90}
+                    bodyColor={rescueAnimal.bodyColor} accentColor={rescueAnimal.accentColor}
+                  />
+                  <Text style={styles.rescueHeroName}>{rescueAnimal.name}</Text>
+                  <Text style={styles.rescueHeroLine}>swooped in to save the day! 💫</Text>
+                </View>
+              ) : selectedAnimal ? (
+                <View style={styles.rescueHeroBox}>
+                  <AnimalSprite
+                    type={selectedAnimal.type} size={90}
+                    bodyColor={selectedAnimal.bodyColor} accentColor={selectedAnimal.accentColor}
+                  />
+                  <Text style={styles.rescueHeroName}>{selectedAnimal.name}</Text>
+                  <Text style={styles.rescueHeroLine}>found a second wind! 💪</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.rescueMessageBox}>
+                <Text style={styles.rescueMessage}>
+                  HP fully restored! The {enemy.name} is scared now…{'\n'}
+                  Finish it off! 💥
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.keepGoingButton}
+                onPress={() => setPhase('fight')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#4CAF50', '#388E3C']} style={styles.keepGoingGradient}>
+                  <Text style={styles.keepGoingText}>Keep Fighting! ⚡</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
@@ -679,6 +744,23 @@ const styles = StyleSheet.create({
   moveEmoji: { fontSize: 24 },
   moveName:  { fontSize: 10, color: '#FFFFFF', fontWeight: '800', marginTop: 2, textAlign: 'center' },
   moveDmg:   { fontSize: 11, color: '#FCA5A5', fontWeight: '700', marginTop: 2 },
+
+  // ── Rescue ──
+  rescueTitle:      { fontSize: 32, fontWeight: '900', color: '#FCD34D', marginBottom: 6, textAlign: 'center' },
+  rescueSubtitle:   { fontSize: 15, color: '#E9D5FF', marginBottom: 16, textAlign: 'center' },
+  rescueHeroBox: {
+    alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 22, padding: 16, marginBottom: 14, width: '100%',
+    borderWidth: 2, borderColor: '#4CAF50',
+  },
+  rescueHeroName: { fontSize: 17, fontWeight: '800', color: '#FFFFFF', marginTop: 8 },
+  rescueHeroLine: { fontSize: 13, color: '#86EFAC', fontStyle: 'italic', marginTop: 4 },
+  rescueMessageBox: {
+    backgroundColor: 'rgba(76,175,80,0.2)', borderRadius: 14, borderWidth: 1.5,
+    borderColor: '#4CAF50', paddingVertical: 12, paddingHorizontal: 18,
+    alignItems: 'center', width: '100%', marginBottom: 20,
+  },
+  rescueMessage: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', textAlign: 'center', lineHeight: 22 },
 
   // ── Victory ──
   victoryTitle:    { fontSize: 40, fontWeight: '900', color: '#FCD34D', marginBottom: 6, textAlign: 'center' },

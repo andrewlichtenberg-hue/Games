@@ -7,7 +7,9 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -146,9 +148,8 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const [rainToast, setRainToast] = useState<string | null>(null);
   const rainToastAnim = useRef(new Animated.Value(0)).current;
 
-  // ── New companion toast ───────────────────────────────────────
-  const [newCompanionName, setNewCompanionName] = useState<string | null>(null);
-  const toastAnim = useRef(new Animated.Value(0)).current;
+  // ── New companion popup ───────────────────────────────────────
+  const [companionPopup, setCompanionPopup] = useState<Animal | null>(null);
 
   // ── Secret animal toast ───────────────────────────────────────
   const [secretToast, setSecretToast] = useState(false);
@@ -228,14 +229,9 @@ export function ExplorationScreen({ route, navigation }: Props) {
 
   // ── Toasts ────────────────────────────────────────────────────
 
-  const showCompanionToast = (animalName: string) => {
-    setNewCompanionName(animalName);
-    toastAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(toastAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
-      Animated.delay(2000),
-      Animated.timing(toastAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
-    ]).start(() => setNewCompanionName(null));
+  const showCompanionPopup = (animal: Animal) => {
+    setCompanionPopup(animal);
+    audioManager.playSfx('friendship');
   };
 
   const showSecretToast = () => {
@@ -279,10 +275,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
     if (extraBoost) increaseFriendship(animal.id, threshold);
     const newLevel = Math.min(current + (extraBoost ? 2 : 1), MAX_FRIENDSHIP);
     if (newLevel >= threshold && !alreadyCompanion) {
-      setTimeout(() => {
-        showCompanionToast(animal.name.split(' ')[0]);
-        audioManager.playSfx('friendship');
-      }, 400);
+      setTimeout(() => showCompanionPopup(animal), 400);
     }
   };
 
@@ -630,22 +623,50 @@ export function ExplorationScreen({ route, navigation }: Props) {
         </Animated.View>
       )}
 
-      {/* New companion toast */}
-      {newCompanionName && (
-        <Animated.View
-          style={[
-            styles.companionToast,
-            {
-              opacity: toastAnim,
-              transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-            },
-          ]}
-        >
-          <Text style={styles.companionToastText}>
-            🏠 {newCompanionName} is now your companion!
-          </Text>
-        </Animated.View>
-      )}
+      {/* New companion popup */}
+      <Modal
+        visible={companionPopup !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setCompanionPopup(null)}
+      >
+        <View style={styles.popupOverlay}>
+          <LinearGradient
+            colors={['#1B5E20', '#388E3C', '#66BB6A']}
+            style={styles.popupCard}
+          >
+            <Text style={styles.popupStars}>🌟✨🌟</Text>
+            <Text style={styles.popupTitle}>New Companion!</Text>
+            {companionPopup && (
+              <>
+                <AnimalSprite
+                  type={companionPopup.type}
+                  size={90}
+                  bodyColor={companionPopup.bodyColor}
+                  accentColor={companionPopup.accentColor}
+                />
+                <Text style={styles.popupAnimalName}>{companionPopup.name}</Text>
+                <Text style={styles.popupAnimalEmoji}>{companionPopup.emoji}</Text>
+                <View style={styles.popupFactBox}>
+                  <Text style={styles.popupFactLabel}>Fun Fact!</Text>
+                  <Text style={styles.popupFactText}>{companionPopup.funFact}</Text>
+                </View>
+                <Text style={styles.popupMoveInText}>
+                  {companionPopup.name.split(' ')[0]} is moving into your room! 🏡
+                </Text>
+              </>
+            )}
+            <TouchableOpacity
+              style={styles.popupButton}
+              onPress={() => setCompanionPopup(null)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.popupButtonText}>Yay! 🎉</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      </Modal>
 
       {/* Puzzle modal */}
       {activePuzzle && (
@@ -884,24 +905,47 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#2E7D32',
   },
-  companionToast: {
-    position: 'absolute',
-    top: 110,
-    alignSelf: 'center',
-    backgroundColor: '#FFF9C4',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderWidth: 2,
-    borderColor: C.UI_GOLD,
+  // ── Companion popup ──
+  popupOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  popupCard: {
+    width: width - 40,
+    borderRadius: 28,
+    padding: 24,
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 16,
+  },
+  popupStars: { fontSize: 28, marginBottom: 4 },
+  popupTitle: { fontSize: 28, fontWeight: '900', color: '#FCD34D', marginBottom: 12, letterSpacing: 1 },
+  popupAnimalName: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', marginTop: 10 },
+  popupAnimalEmoji: { fontSize: 32, marginTop: 4, marginBottom: 8 },
+  popupFactBox: {
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 16,
+    padding: 14,
+    width: '100%',
+    marginBottom: 12,
+  },
+  popupFactLabel: { fontSize: 12, fontWeight: '800', color: '#A5D6A7', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
+  popupFactText: { fontSize: 14, color: '#FFFFFF', lineHeight: 21, fontStyle: 'italic' },
+  popupMoveInText: { fontSize: 15, fontWeight: '700', color: '#C8E6C9', textAlign: 'center', marginBottom: 16 },
+  popupButton: {
+    backgroundColor: '#FCD34D',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    shadowColor: '#D97706',
+    shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 6,
   },
-  companionToastText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: C.TEXT_DARK,
-  },
+  popupButtonText: { fontSize: 20, fontWeight: '900', color: '#1C1917' },
 });

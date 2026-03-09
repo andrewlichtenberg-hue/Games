@@ -10,6 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { C } from '../utils/colors';
 import { LEVEL_TITLES, getRewardForLevel } from '../game/progression';
+import { getItemById } from '../game/items';
 import { BigButton } from './ui/BigButton';
 import { StarBurst } from './StarBurst';
 
@@ -97,13 +98,21 @@ export function LevelUpModal({ visible, level, onClose }: LevelUpModalProps) {
 
                 {reward.items.length > 0 && (
                   <>
-                    <Text style={styles.itemsLabel}>✨ New Items!</Text>
-                    <View style={styles.itemsRow}>
-                      {reward.items.slice(0, 4).map((id) => (
-                        <View key={id} style={styles.itemBubble}>
-                          <Text style={styles.itemEmoji}>🎁</Text>
-                        </View>
-                      ))}
+                    <Text style={styles.itemsLabel}>✨ New Items Unlocked!</Text>
+                    <View style={styles.itemsList}>
+                      {reward.items.map((id) => {
+                        const item = getItemById(id);
+                        if (!item) return null;
+                        return (
+                          <View key={id} style={styles.itemCard}>
+                            <Text style={styles.itemCardEmoji}>{item.emoji}</Text>
+                            <View style={styles.itemCardText}>
+                              <Text style={styles.itemCardName}>{item.name}</Text>
+                              <Text style={styles.itemCardDesc}>{item.description}</Text>
+                            </View>
+                          </View>
+                        );
+                      })}
                     </View>
                   </>
                 )}
@@ -196,24 +205,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  itemsRow: {
-    flexDirection: 'row',
+  itemsList: {
+    width: '100%',
     gap: 8,
     marginBottom: 16,
   },
-  itemBubble: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  itemCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 14,
+    padding: 10,
+    gap: 10,
   },
-  itemEmoji: {
-    fontSize: 24,
-  },
+  itemCardEmoji: { fontSize: 28, lineHeight: 34 },
+  itemCardText: { flex: 1 },
+  itemCardName: { fontSize: 14, fontWeight: '800', color: '#FCD34D', marginBottom: 2 },
+  itemCardDesc: { fontSize: 12, color: 'rgba(255,255,255,0.88)', lineHeight: 17 },
   button: {
     marginTop: 8,
     alignSelf: 'stretch',
