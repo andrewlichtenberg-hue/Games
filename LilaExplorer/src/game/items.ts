@@ -1,4 +1,4 @@
-export type ItemType = 'hat' | 'outfit' | 'accessory' | 'powerup' | 'furniture';
+export type ItemType = 'hat' | 'outfit' | 'accessory' | 'powerup' | 'furniture' | 'special';
 export type SlotType = 'hat' | 'outfit' | 'accessory' | 'furniture';
 
 export interface GameItem {
@@ -224,6 +224,16 @@ export const ITEMS: GameItem[] = [
     description: 'Once per area, your first wrong puzzle answer becomes a free retry — the clover protects you!',
     unlocksAtLevel: 9,
     powerupEffect: 'extra_retry',
+  },
+
+  // ── Special ───────────────────────────────────────────────────
+  {
+    id: 'item-sticker-book',
+    name: 'Explorer\'s Sticker Book',
+    type: 'special',
+    emoji: '📖',
+    description: 'Collect stickers by solving puzzles with your animal companions! Place them on 5 beautiful scene pages.',
+    unlocksAtLevel: 1,
   },
 
   // ── Furniture ─────────────────────────────────────────────────

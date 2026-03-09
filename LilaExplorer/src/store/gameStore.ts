@@ -6,6 +6,16 @@ import {
   getRewardForLevel,
   MAX_FRIENDSHIP,
 } from '../game/progression';
+import { NUM_STICKER_BOOK_PAGES } from '../game/stickers';
+
+export interface StickerPlacement {
+  instanceId: string;
+  stickerId: string;
+  xPct: number;       // 0–1 relative to page width
+  yPct: number;       // 0–1 relative to page height
+  rotation: number;   // degrees, -20 to +20
+  scale: number;      // 0.8–1.4
+}
 
 const POWERUP_IDS = [
   'powerup-binoculars',
@@ -60,6 +70,10 @@ export interface GameState {
   activePowerups: string[];       // all owned powers are active; player can toggle off individually
   equippedFurniture: string[];    // items placed in Lila's room
 
+  // ── Stickers ─────────────────────────────────────────────────
+  ownedStickers: Record<string, number>;        // stickerId → unplaced count
+  stickerBookPages: StickerPlacement[][];       // 5 pages
+
   // ── Journal ──────────────────────────────────────────────────
   journalEntries: string[];
   claimedLocationBonuses: string[];
@@ -82,11 +96,14 @@ export interface GameState {
   toggleFurniture: (itemId: string) => void;
   unlockItem: (itemId: string) => void;
   checkDailyStreak: () => number;
+  earnSticker: (stickerId: string) => void;
+  placeStickerOnPage: (pageIndex: number, placement: StickerPlacement) => void;
+  removeStickerFromPage: (pageIndex: number, instanceId: string, stickerId: string) => void;
   resetGame: () => void;
 }
 
 const DEFAULT_UNLOCKED = ['prospect-park'];
-const DEFAULT_OWNED_ITEMS = ['hat-explorer', 'outfit-garden', 'furn-bed'];
+const DEFAULT_OWNED_ITEMS = ['hat-explorer', 'outfit-garden', 'furn-bed', 'item-sticker-book'];
 
 const INITIAL_STATE = {
   playerName: '',
@@ -110,6 +127,8 @@ const INITIAL_STATE = {
   ownedPowerups: [] as string[],
   activePowerups: [] as string[],
   equippedFurniture: ['furn-bed'] as string[],
+  ownedStickers: {} as Record<string, number>,
+  stickerBookPages: Array.from({ length: NUM_STICKER_BOOK_PAGES }, () => []) as StickerPlacement[][],
   journalEntries: [] as string[],
   claimedLocationBonuses: [] as string[],
   dailyStreak: 0,
@@ -308,6 +327,31 @@ export const useGameStore = create<GameState>()(
         return bonus;
       },
 
+      earnSticker: (stickerId) => {
+        const { ownedStickers } = get();
+        set({ ownedStickers: { ...ownedStickers, [stickerId]: (ownedStickers[stickerId] ?? 0) + 1 } });
+      },
+
+      placeStickerOnPage: (pageIndex, placement) => {
+        const { ownedStickers, stickerBookPages } = get();
+        const count = ownedStickers[placement.stickerId] ?? 0;
+        if (count <= 0) return;
+        const newOwned = { ...ownedStickers, [placement.stickerId]: count - 1 };
+        const newPages = stickerBookPages.map((p, i) => i === pageIndex ? [...p, placement] : p);
+        set({ ownedStickers: newOwned, stickerBookPages: newPages });
+      },
+
+      removeStickerFromPage: (pageIndex, instanceId, stickerId) => {
+        const { ownedStickers, stickerBookPages } = get();
+        const newPages = stickerBookPages.map((p, i) =>
+          i === pageIndex ? p.filter((s) => s.instanceId !== instanceId) : p
+        );
+        set({
+          stickerBookPages: newPages,
+          ownedStickers: { ...ownedStickers, [stickerId]: (ownedStickers[stickerId] ?? 0) + 1 },
+        });
+      },
+
       resetGame: () => set({ ...INITIAL_STATE }),
     }),
     {
@@ -340,6 +384,19 @@ export const useGameStore = create<GameState>()(
         if (!state.equippedAccessories) {
           const legacy = (state as any).equippedAccessory as string | null;
           state.equippedAccessories = legacy ? [legacy] : [];
+        }
+
+        // Sticker fields (new)
+        if (!state.ownedStickers) state.ownedStickers = {};
+        if (!state.stickerBookPages || state.stickerBookPages.length < NUM_STICKER_BOOK_PAGES) {
+          state.stickerBookPages = Array.from(
+            { length: NUM_STICKER_BOOK_PAGES },
+            (_, i) => state.stickerBookPages?.[i] ?? []
+          );
+        }
+        // Ensure sticker book is in owned items for existing saves
+        if (!state.ownedItems.includes('item-sticker-book')) {
+          state.ownedItems = [...state.ownedItems, 'item-sticker-book'];
         }
 
         // Defaults for new fields

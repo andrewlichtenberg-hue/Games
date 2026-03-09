@@ -14,6 +14,7 @@ import { ExplorationScreen } from './src/screens/ExplorationScreen';
 import { JournalScreen } from './src/screens/JournalScreen';
 import { WardrobeScreen } from './src/screens/WardrobeScreen';
 import { RoomScreen } from './src/screens/RoomScreen';
+import { StickerBookScreen } from './src/screens/StickerBookScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -24,6 +25,7 @@ export type RootStackParamList = {
   Journal: undefined;
   Wardrobe: undefined;
   Room: undefined;
+  StickerBook: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -62,6 +64,7 @@ export default function App() {
             <Stack.Screen name="Journal" component={JournalScreen} />
             <Stack.Screen name="Wardrobe" component={WardrobeScreen} />
             <Stack.Screen name="Room" component={RoomScreen} />
+            <Stack.Screen name="StickerBook" component={StickerBookScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

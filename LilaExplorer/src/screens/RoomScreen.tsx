@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { LilaCharacter } from '../components/LilaCharacter';
 import { FurnitureSprite } from '../components/FurnitureSprite';
 import { AnimalSprite } from '../components/AnimalSprite';
+import { CompanionInteractionModal } from '../components/CompanionInteractionModal';
 import { C } from '../utils/colors';
 import { useGameStore } from '../store/gameStore';
 import { getAnimalById, Animal } from '../game/animals';
@@ -34,22 +35,14 @@ const FURNITURE_SLOTS: Array<{ top?: number; bottom?: number; left?: number; rig
   { top: 150, left: width / 2 - 30 },
 ];
 
-function GreetingBubble({ text, onDismiss }: { text: string; onDismiss: () => void }) {
-  return (
-    <TouchableOpacity onPress={onDismiss} style={styles.bubble} activeOpacity={0.9}>
-      <Text style={styles.bubbleTail}>▼</Text>
-      <Text style={styles.bubbleText}>"{text}"</Text>
-    </TouchableOpacity>
-  );
-}
-
 export function RoomScreen({ navigation }: Props) {
   const {
     playerName, hairColor, skinTone, outfitColor,
     equippedHat, equippedOutfit, equippedFurniture, companionAnimals,
+    earnSticker, gainXP,
   } = useGameStore();
 
-  const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);
+  const [interactAnimalId, setInteractAnimalId] = useState<string | null>(null);
   const bounceAnims = useRef<Record<string, Animated.Value>>({}).current;
 
   const activeOutfitColor = equippedOutfit
@@ -61,17 +54,17 @@ export function RoomScreen({ navigation }: Props) {
     return bounceAnims[id];
   };
 
-  const handleAnimalTap = (id: string, animal: Animal) => {
+  const handleAnimalTap = (id: string, _animal: Animal) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const bounce = getOrCreateBounce(id);
     Animated.sequence([
       Animated.timing(bounce, { toValue: -12, duration: 120, useNativeDriver: true }),
       Animated.spring(bounce, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 14 }),
     ]).start();
-    setSelectedAnimalId(selectedAnimalId === id ? null : id);
+    setInteractAnimalId(id);
   };
 
-  const selectedAnimal = selectedAnimalId ? getAnimalById(selectedAnimalId) : null;
+  const interactAnimal = interactAnimalId ? getAnimalById(interactAnimalId) : null;
 
   return (
     <LinearGradient colors={['#FFF3E0', '#FFF9C4', '#E8F5E9']} style={styles.container}>
@@ -150,14 +143,6 @@ export function RoomScreen({ navigation }: Props) {
                   { transform: [{ translateY: bounce }] },
                 ]}
               >
-                {selectedAnimalId === id && selectedAnimal && (
-                  <View style={styles.bubbleWrapper}>
-                    <GreetingBubble
-                      text={selectedAnimal.greetings[0].slice(0, 50)}
-                      onDismiss={() => setSelectedAnimalId(null)}
-                    />
-                  </View>
-                )}
                 <TouchableOpacity
                   onPress={() => handleAnimalTap(id, animal)}
                   activeOpacity={0.85}
@@ -172,6 +157,7 @@ export function RoomScreen({ navigation }: Props) {
                 <Text style={styles.companionNameLabel}>
                   {animal.name.split(' ')[0]}
                 </Text>
+                <Text style={styles.companionTapHint}>tap me!</Text>
               </Animated.View>
             );
           })}
@@ -222,10 +208,13 @@ export function RoomScreen({ navigation }: Props) {
           <Text style={styles.statLabel}>Companions</Text>
         </View>
         <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statNum}>{equippedFurniture.length}/5</Text>
-          <Text style={styles.statLabel}>Furniture</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.statItem}
+          onPress={() => navigation.navigate('StickerBook')}
+        >
+          <Text style={styles.statNum}>📖</Text>
+          <Text style={[styles.statLabel, { color: C.UI_PRIMARY }]}>Stickers</Text>
+        </TouchableOpacity>
         <View style={styles.statDivider} />
         <TouchableOpacity
           style={styles.statItem}
@@ -235,6 +224,17 @@ export function RoomScreen({ navigation }: Props) {
           <Text style={[styles.statLabel, { color: C.UI_PRIMARY }]}>Decorate</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Companion interaction modal */}
+      {interactAnimal && (
+        <CompanionInteractionModal
+          visible
+          animal={interactAnimal}
+          onEarnSticker={(id) => earnSticker(id)}
+          onGainXP={(xp) => gainXP(xp)}
+          onClose={() => setInteractAnimalId(null)}
+        />
+      )}
     </LinearGradient>
   );
 }
@@ -317,37 +317,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1,
   },
-  bubbleWrapper: {
-    position: 'absolute',
-    bottom: '100%',
-    marginBottom: 4,
-    zIndex: 10,
-    width: 160,
-    left: -54,
-  },
-  bubble: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 8,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  bubbleTail: {
-    position: 'absolute',
-    bottom: -14,
-    left: 60,
-    fontSize: 12,
-    color: '#E0E0E0',
-  },
-  bubbleText: {
-    fontSize: 11,
-    color: C.TEXT_DARK,
-    fontStyle: 'italic',
-    lineHeight: 16,
+  companionTapHint: {
+    fontSize: 8,
+    color: C.UI_PRIMARY,
+    fontWeight: '700',
+    marginTop: 1,
     textAlign: 'center',
   },
   emptyRoom: {

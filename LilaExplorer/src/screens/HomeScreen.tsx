@@ -227,6 +227,13 @@ export function HomeScreen({ navigation }: Props) {
               color="#E17055"
               onPress={() => navigation.navigate('Wardrobe')}
             />
+            <NavCard
+              emoji="📖"
+              label="Stickers"
+              sublabel="Place & collect stickers"
+              color="#7B1FA2"
+              onPress={() => navigation.navigate('StickerBook')}
+            />
           </View>
 
           {/* Big explore button */}
