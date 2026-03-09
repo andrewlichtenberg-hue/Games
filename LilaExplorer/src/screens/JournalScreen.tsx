@@ -9,6 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
 import { AnimalSprite } from '../components/AnimalSprite';
@@ -269,6 +270,7 @@ function LocationPage({
 // ── Main screen ──────────────────────────────────────────────────────────────
 
 export function JournalScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const {
     discoveredAnimals,
     companionAnimals,
@@ -297,7 +299,7 @@ export function JournalScreen({ navigation }: Props) {
     <>
       <LinearGradient colors={['#E8F5E9', '#FFF9C4']} style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Text style={styles.backText}>← Home</Text>
           </TouchableOpacity>
@@ -394,7 +396,7 @@ export function JournalScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingTop: 52, paddingHorizontal: 16, paddingBottom: 10 },
+  header: { paddingHorizontal: 16, paddingBottom: 10 },
   backBtn: { marginBottom: 4 },
   backText: { fontSize: 15, fontWeight: '700', color: C.TEXT_MID },
   title: { fontSize: 26, fontWeight: '900', color: C.TEXT_DARK },

@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Haptics } from '../utils/haptics';
 import { SceneBackground } from '../components/SceneBackground';
 import { LilaCharacter } from '../components/LilaCharacter';
@@ -80,6 +81,7 @@ function spawnAnimals(
 
 export function ExplorationScreen({ route, navigation }: Props) {
   const { locationId } = route.params;
+  const insets = useSafeAreaInsets();
   const location = getLocationById(locationId);
   const locationAnimals = location ? getAnimalsForLocation(locationId) : [];
 
@@ -379,7 +381,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => handleLeave('back')} style={styles.backBtn}>
           <Text style={styles.backText}>← Map</Text>
         </TouchableOpacity>
@@ -706,7 +708,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 50,
     paddingBottom: 8,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(0,0,0,0.04)',

@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
 import { LilaCharacter } from '../components/LilaCharacter';
@@ -36,6 +37,7 @@ const FURNITURE_SLOTS: Array<{ top?: number; bottom?: number; left?: number; rig
 ];
 
 export function RoomScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const {
     playerName, hairColor, skinTone, outfitColor,
     equippedHat, equippedOutfit, equippedFurniture, companionAnimals,
@@ -69,7 +71,7 @@ export function RoomScreen({ navigation }: Props) {
   return (
     <LinearGradient colors={['#FFF3E0', '#FFF9C4', '#E8F5E9']} style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Home</Text>
         </TouchableOpacity>
@@ -242,7 +244,6 @@ export function RoomScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingTop: 52,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },

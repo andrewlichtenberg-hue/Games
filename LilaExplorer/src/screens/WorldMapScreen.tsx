@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -166,6 +167,7 @@ function LocationCard({
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export function WorldMapScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { unlockedLocations, visitedLocations, discoveredAnimals } = useGameStore();
 
   useFocusEffect(
@@ -206,7 +208,7 @@ export function WorldMapScreen({ navigation }: Props) {
   );
 
   const header = (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
         <Text style={styles.backText}>← Home</Text>
       </TouchableOpacity>
@@ -247,10 +249,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   header: {
-    height: HEADER_H,
-    paddingTop: IS_IPAD ? 48 : 52,
     paddingHorizontal: GRID_PAD,
-    justifyContent: 'flex-end',
     paddingBottom: IS_IPAD ? 10 : 8,
   },
   backBtn: { marginBottom: 4 },

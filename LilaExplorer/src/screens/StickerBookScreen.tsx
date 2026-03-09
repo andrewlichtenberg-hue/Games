@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '../utils/colors';
 import { useGameStore, StickerPlacement } from '../store/gameStore';
 import {
@@ -65,6 +66,7 @@ function makeInstanceId() { return `inst-${nextInstanceId++}`; }
 // ── component ─────────────────────────────────────────────────────────────────
 
 export function StickerBookScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const {
     ownedStickers, stickerBookPages,
     placeStickerOnPage, removeStickerFromPage,
@@ -135,7 +137,7 @@ export function StickerBookScreen({ navigation }: Props) {
     <LinearGradient colors={['#1A237E', '#311B92', '#4A148C']} style={styles.container}>
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
@@ -284,7 +286,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 52,
     paddingBottom: 10,
     paddingHorizontal: 16,
   },

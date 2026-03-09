@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Haptics } from '../utils/haptics';
 import { LilaCharacter } from '../components/LilaCharacter';
@@ -99,6 +100,7 @@ function StepDots({ step }: { step: number }) {
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export function CharacterCreationScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const createCharacter = useGameStore((s) => s.createCharacter);
 
   const [step, setStep] = useState(0);
@@ -194,7 +196,7 @@ export function CharacterCreationScreen({ navigation }: Props) {
   return (
     <LinearGradient colors={['#E1F5FE', '#F3E5F5']} style={styles.container}>
       {/* Progress dots */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <StepDots step={step} />
       </View>
 
@@ -259,7 +261,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   topBar: {
-    paddingTop: 54,
     paddingBottom: 8,
     alignItems: 'center',
   },

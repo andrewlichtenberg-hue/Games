@@ -6,8 +6,10 @@ import {
   Dimensions,
   TouchableOpacity,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -57,6 +59,7 @@ function NavCard({
 }
 
 export function HomeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const {
     playerName,
     hairColor,
@@ -92,7 +95,7 @@ export function HomeScreen({ navigation }: Props) {
           {/* Header */}
           <LinearGradient
             colors={['#6C5CE7', '#A29BFE']}
-            style={styles.header}
+            style={[styles.header, { paddingTop: insets.top + 12 }]}
           >
             <View style={styles.headerTop}>
               <View style={{ flex: 1 }}>
@@ -112,6 +115,14 @@ export function HomeScreen({ navigation }: Props) {
               <XPBar xp={xp} level={level} />
             </View>
           </LinearGradient>
+
+          {/* Scrollable body for small screens */}
+          <ScrollView
+            style={styles.bodyScroll}
+            contentContainerStyle={styles.bodyScrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={Platform.OS === 'ios'}
+          >
 
           {/* Companion room */}
           <View style={styles.roomSection}>
@@ -245,6 +256,8 @@ export function HomeScreen({ navigation }: Props) {
             size="large"
             style={styles.bigExplore}
           />
+
+          </ScrollView>
       </LinearGradient>
 
       {/* Level-up modal */}
@@ -263,7 +276,6 @@ export function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: {
-    paddingTop: 48,
     paddingBottom: 14,
     paddingHorizontal: 20,
   },
@@ -286,11 +298,12 @@ const styles = StyleSheet.create({
   xpContainer: {
     marginTop: 2,
   },
+  bodyScroll: { flex: 1 },
+  bodyScrollContent: { paddingBottom: 8 },
   roomSection: {
-    flex: 1,
+    height: 200,
     marginTop: 12,
     paddingHorizontal: 16,
-    minHeight: 120,
   },
   sectionTitleRow: {
     flexDirection: 'row',

@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
 import { LilaCharacter } from '../components/LilaCharacter';
@@ -107,6 +108,7 @@ function ItemTile({
 }
 
 export function WardrobeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const {
     hairColor, skinTone, outfitColor,
     equippedHat, equippedOutfit, equippedAccessories,
@@ -191,7 +193,7 @@ export function WardrobeScreen({ navigation }: Props) {
   return (
     <LinearGradient colors={['#FFF3E0', '#FCE4EC']} style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Home</Text>
         </TouchableOpacity>
@@ -285,7 +287,6 @@ export function WardrobeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingTop: 52,
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
