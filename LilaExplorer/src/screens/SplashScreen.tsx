@@ -7,7 +7,6 @@ import {
   Dimensions,
   StatusBar,
   Alert,
-  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -133,9 +132,15 @@ export function SplashScreen({ navigation }: Props) {
         />
       </Animated.View>
       {isCharacterCreated && (
-        <TouchableOpacity onPress={handleNewGame} style={styles.newGameBtn} activeOpacity={0.7}>
-          <Text style={styles.newGameText}>Start New Game</Text>
-        </TouchableOpacity>
+        <View style={styles.newGameBtn}>
+          <BigButton
+            label="Start New Game"
+            emoji="🔄"
+            onPress={handleNewGame}
+            color="pink"
+            size="small"
+          />
+        </View>
       )}
 
       <Text style={styles.footer}>Brooklyn → World 🗺️</Text>
@@ -197,16 +202,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   newGameBtn: {
-    marginTop: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-  },
-  newGameText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.55)',
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-    textDecorationColor: 'rgba(255,255,255,0.4)',
+    marginTop: 16,
+    width: '70%',
   },
   footer: {
     position: 'absolute',
