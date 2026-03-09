@@ -6,6 +6,8 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -21,6 +23,7 @@ type Props = { navigation: StackNavigationProp<RootStackParamList, 'Splash'> };
 export function SplashScreen({ navigation }: Props) {
   const isCharacterCreated = useGameStore((s) => s.isCharacterCreated);
   const playerName = useGameStore((s) => s.playerName);
+  const resetGame = useGameStore((s) => s.resetGame);
 
   const titleScale = useRef(new Animated.Value(0.6)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
@@ -56,6 +59,24 @@ export function SplashScreen({ navigation }: Props) {
     } else {
       navigation.replace('CharacterCreation');
     }
+  };
+
+  const handleNewGame = () => {
+    Alert.alert(
+      'Start New Game?',
+      `This will erase ${playerName}'s progress — all companions, stickers, levels, and items will be lost forever.\n\nAre you sure?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, Start Over',
+          style: 'destructive',
+          onPress: () => {
+            resetGame();
+            navigation.replace('CharacterCreation');
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -110,6 +131,11 @@ export function SplashScreen({ navigation }: Props) {
           color="gold"
           size="large"
         />
+        {isCharacterCreated && (
+          <TouchableOpacity onPress={handleNewGame} style={styles.newGameBtn} activeOpacity={0.7}>
+            <Text style={styles.newGameText}>Start New Game</Text>
+          </TouchableOpacity>
+        )}
       </Animated.View>
 
       <Text style={styles.footer}>Brooklyn → World 🗺️</Text>
@@ -169,6 +195,18 @@ const styles = StyleSheet.create({
   btnWrapper: {
     width: '100%',
     alignItems: 'center',
+  },
+  newGameBtn: {
+    marginTop: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+  },
+  newGameText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    textDecorationColor: 'rgba(255,255,255,0.4)',
   },
   footer: {
     position: 'absolute',
