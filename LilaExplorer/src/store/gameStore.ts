@@ -10,8 +10,11 @@ import {
 const POWERUP_IDS = [
   'powerup-binoculars',
   'powerup-rain-boots',
+  'powerup-calculator',
   'powerup-lantern',
+  'powerup-whistle',
   'powerup-journal-upgrade',
+  'powerup-lucky-clover',
 ];
 
 const FURNITURE_IDS = [
@@ -22,8 +25,6 @@ const FURNITURE_IDS = [
   'furn-cactus',
   'furn-trophy',
 ];
-
-const MAX_ACTIVE_POWERUPS = 2;
 const MAX_EQUIPPED_ACCESSORIES = 2;
 const MAX_FURNITURE = 6;
 
@@ -56,7 +57,7 @@ export interface GameState {
   equippedOutfit: string | null;
   equippedAccessories: string[];  // up to 2 cosmetic accessories
   ownedPowerups: string[];
-  activePowerups: string[];       // up to 2 player-selected active powerups
+  activePowerups: string[];       // all owned powers are active; player can toggle off individually
   equippedFurniture: string[];    // items placed in Lila's room
 
   // ── Journal ──────────────────────────────────────────────────
@@ -154,10 +155,10 @@ export const useGameStore = create<GameState>()(
             ? [...new Set([...state.ownedPowerups, ...rewardPowerups])]
             : state.ownedPowerups;
 
-          // Auto-activate new powerups if slots remain
+          // Auto-activate all new powerups (no slot cap)
           const newActivePowerups = [...state.activePowerups];
           for (const pid of rewardPowerups) {
-            if (newActivePowerups.length < MAX_ACTIVE_POWERUPS && !newActivePowerups.includes(pid)) {
+            if (!newActivePowerups.includes(pid)) {
               newActivePowerups.push(pid);
             }
           }
@@ -252,13 +253,11 @@ export const useGameStore = create<GameState>()(
       toggleActivePowerup: (itemId) => {
         const { activePowerups, ownedPowerups } = get();
         if (!ownedPowerups.includes(itemId)) return;
+        // Simple toggle — no slot cap, all owned powers can be active simultaneously
         if (activePowerups.includes(itemId)) {
           set({ activePowerups: activePowerups.filter(id => id !== itemId) });
-        } else if (activePowerups.length < MAX_ACTIVE_POWERUPS) {
-          set({ activePowerups: [...activePowerups, itemId] });
         } else {
-          // Evict oldest, add new
-          set({ activePowerups: [activePowerups[1], itemId] });
+          set({ activePowerups: [...activePowerups, itemId] });
         }
       },
 
@@ -278,8 +277,9 @@ export const useGameStore = create<GameState>()(
         if (ownedItems.includes(itemId)) return;
         const isPowerup = POWERUP_IDS.includes(itemId);
         const newOwnedPowerups = isPowerup ? [...ownedPowerups, itemId] : ownedPowerups;
+        // Auto-activate — all owned powers are active by default
         const newActivePowerups =
-          isPowerup && activePowerups.length < MAX_ACTIVE_POWERUPS
+          isPowerup && !activePowerups.includes(itemId)
             ? [...activePowerups, itemId]
             : activePowerups;
         set({
@@ -324,9 +324,16 @@ export const useGameStore = create<GameState>()(
           state.ownedPowerups = [...(state.ownedPowerups ?? []), ...missingPowerups];
         }
 
-        // Seed activePowerups from ownedPowerups if missing (old saves had all auto-active)
-        if (!state.activePowerups || state.activePowerups.length === 0) {
-          state.activePowerups = (state.ownedPowerups ?? []).slice(0, MAX_ACTIVE_POWERUPS);
+        // Ensure all owned powerups are active (migration: old saves had a 2-slot cap)
+        if (!state.activePowerups) {
+          state.activePowerups = [...(state.ownedPowerups ?? [])];
+        } else {
+          // Activate any owned powers that aren't already active
+          for (const pid of state.ownedPowerups ?? []) {
+            if (!state.activePowerups.includes(pid)) {
+              state.activePowerups.push(pid);
+            }
+          }
         }
 
         // Migrate old equippedAccessory (single string) → equippedAccessories (array)

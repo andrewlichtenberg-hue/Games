@@ -183,7 +183,9 @@ export function WardrobeScreen({ navigation }: Props) {
     : outfitColor;
 
   // Status chips for powerup and furniture tabs
-  const powerupStatusText = `⚡ ${activePowerups.length}/2 Powers Active`;
+  const powerupStatusText = activePowerups.length === 0
+    ? '⚡ No powers active — tap one to turn it on!'
+    : `⚡ ${activePowerups.length} Power${activePowerups.length === 1 ? '' : 's'} Active — All can be on at once!`;
   const furnitureStatusText = `🏡 ${equippedFurniture.length}/5 Items in Room`;
 
   return (

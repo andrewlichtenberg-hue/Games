@@ -181,6 +181,15 @@ export const ITEMS: GameItem[] = [
     powerupEffect: 'xp_boost',
   },
   {
+    id: 'powerup-calculator',
+    name: 'Explorer Calculator',
+    type: 'powerup',
+    emoji: '🧮',
+    description: 'Once per area visit, open a mini calculator during a math puzzle — tap the button while answering!',
+    unlocksAtLevel: 4,
+    powerupEffect: 'calculator',
+  },
+  {
     id: 'powerup-lantern',
     name: 'Magic Lantern',
     type: 'powerup',
@@ -190,6 +199,15 @@ export const ITEMS: GameItem[] = [
     powerupEffect: 'puzzle_hint',
   },
   {
+    id: 'powerup-whistle',
+    name: 'Animal Whistle',
+    type: 'powerup',
+    emoji: '🎵',
+    description: 'Animals are never shy! All their names are revealed from the start so you can plan who to visit.',
+    unlocksAtLevel: 6,
+    powerupEffect: 'reveal_names',
+  },
+  {
     id: 'powerup-journal-upgrade',
     name: 'Golden Journal',
     type: 'powerup',
@@ -197,6 +215,15 @@ export const ITEMS: GameItem[] = [
     description: 'Puzzle bonus XP is DOUBLED and a golden star shower falls every time you get one right!',
     unlocksAtLevel: 7,
     powerupEffect: 'double_puzzle_xp',
+  },
+  {
+    id: 'powerup-lucky-clover',
+    name: 'Lucky Clover',
+    type: 'powerup',
+    emoji: '🍀',
+    description: 'Once per area, your first wrong puzzle answer becomes a free retry — the clover protects you!',
+    unlocksAtLevel: 9,
+    powerupEffect: 'extra_retry',
   },
 
   // ── Furniture ─────────────────────────────────────────────────

@@ -18,14 +18,137 @@ interface Props {
   animalEmoji: string;
   puzzle: Puzzle;
   bonusXP: number;
-  hasLanternHint?: boolean;   // one hint available this area visit
-  hasGoldenJournal?: boolean; // doubles puzzle XP + gold star shower
-  onHintUsed?: () => void;    // tell parent hint is consumed
+  hasLanternHint?: boolean;    // one hint available this area visit
+  hasGoldenJournal?: boolean;  // doubles puzzle XP + gold star shower
+  hasCalculator?: boolean;     // one calculator use available this area visit
+  hasLuckyClover?: boolean;    // grants one free extra retry per area visit
+  onHintUsed?: () => void;     // tell parent hint is consumed
+  onCalculatorUsed?: () => void;
   onCorrect: (xp: number) => void;
   onDismiss: () => void;
 }
 
-type UIState = 'question' | 'correct' | 'wrong';
+type UIState = 'question' | 'correct' | 'wrong' | 'clover';
+
+// ── Mini Calculator ──────────────────────────────────────────────────────────
+
+const CALC_BUTTONS = [
+  ['7', '8', '9', '÷'],
+  ['4', '5', '6', '×'],
+  ['1', '2', '3', '-'],
+  ['0', '.', '=', '+'],
+  ['C', '', '', '⌫'],
+];
+
+function MiniCalculator({ onClose }: { onClose: () => void }) {
+  const [display, setDisplay] = useState('0');
+  const [pending, setPending] = useState<{ value: number; op: string } | null>(null);
+  const [justEvaluated, setJustEvaluated] = useState(false);
+
+  const handleButton = (btn: string) => {
+    if (btn === '') return;
+
+    if (btn === 'C') {
+      setDisplay('0');
+      setPending(null);
+      setJustEvaluated(false);
+      return;
+    }
+
+    if (btn === '⌫') {
+      setDisplay((d) => (d.length <= 1 ? '0' : d.slice(0, -1)));
+      return;
+    }
+
+    const isOp = ['÷', '×', '-', '+'].includes(btn);
+
+    if (btn === '=') {
+      if (!pending) return;
+      const current = parseFloat(display);
+      let result = 0;
+      if (pending.op === '+') result = pending.value + current;
+      else if (pending.op === '-') result = pending.value - current;
+      else if (pending.op === '×') result = pending.value * current;
+      else if (pending.op === '÷') result = current !== 0 ? pending.value / current : 0;
+      const resultStr = Number.isInteger(result) ? String(result) : result.toFixed(4).replace(/\.?0+$/, '');
+      setDisplay(resultStr);
+      setPending(null);
+      setJustEvaluated(true);
+      return;
+    }
+
+    if (isOp) {
+      setPending({ value: parseFloat(display), op: btn });
+      setJustEvaluated(false);
+      setDisplay('0');
+      return;
+    }
+
+    // Digit or decimal
+    if (justEvaluated) {
+      setDisplay(btn === '.' ? '0.' : btn);
+      setJustEvaluated(false);
+      return;
+    }
+    if (btn === '.' && display.includes('.')) return;
+    if (display === '0' && btn !== '.') {
+      setDisplay(btn);
+    } else {
+      if (display.length >= 10) return;
+      setDisplay((d) => d + btn);
+    }
+  };
+
+  return (
+    <View style={calcStyles.overlay}>
+      <View style={calcStyles.container}>
+        <View style={calcStyles.header}>
+          <Text style={calcStyles.title}>🧮 Calculator</Text>
+          <TouchableOpacity onPress={onClose} style={calcStyles.closeBtn}>
+            <Text style={calcStyles.closeText}>Done ✓</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={calcStyles.display}>
+          <Text style={calcStyles.displayText} numberOfLines={1} adjustsFontSizeToFit>
+            {pending ? `${pending.value} ${pending.op}` : ''}
+          </Text>
+          <Text style={calcStyles.displayMain} numberOfLines={1} adjustsFontSizeToFit>
+            {display}
+          </Text>
+        </View>
+
+        {CALC_BUTTONS.map((row, ri) => (
+          <View key={ri} style={calcStyles.row}>
+            {row.map((btn, ci) => {
+              const isOp = ['÷', '×', '-', '+', '='].includes(btn);
+              const isClear = btn === 'C' || btn === '⌫';
+              const isEmpty = btn === '';
+              return (
+                <TouchableOpacity
+                  key={ci}
+                  style={[
+                    calcStyles.btn,
+                    isOp && calcStyles.btnOp,
+                    isClear && calcStyles.btnClear,
+                    isEmpty && calcStyles.btnEmpty,
+                  ]}
+                  onPress={() => handleButton(btn)}
+                  activeOpacity={isEmpty ? 1 : 0.7}
+                  disabled={isEmpty}
+                >
+                  <Text style={[calcStyles.btnText, isOp && calcStyles.btnOpText]}>
+                    {btn}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 // ── Falling star for Golden Journal celebration ───────────────────────────────
 
@@ -71,7 +194,10 @@ export function PuzzleModal({
   bonusXP,
   hasLanternHint = false,
   hasGoldenJournal = false,
+  hasCalculator = false,
+  hasLuckyClover = false,
   onHintUsed,
+  onCalculatorUsed,
   onCorrect,
   onDismiss,
 }: Props) {
@@ -81,6 +207,9 @@ export function PuzzleModal({
   // Lantern: which choice index is crossed out
   const [eliminatedIndex, setEliminatedIndex] = useState<number | null>(null);
   const lanternPulse = useRef(new Animated.Value(1)).current;
+
+  // Calculator overlay
+  const [showCalculator, setShowCalculator] = useState(false);
 
   // Card entrance
   const scaleAnim = useRef(new Animated.Value(0.88)).current;
@@ -94,6 +223,7 @@ export function PuzzleModal({
       setUsedRetry(false);
       setEliminatedIndex(null);
       setShowStars(false);
+      setShowCalculator(false);
       scaleAnim.setValue(0.88);
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -146,15 +276,29 @@ export function PuzzleModal({
       if (hasGoldenJournal) setShowStars(true);
       setTimeout(() => onCorrect(bonusXP), 2200);
     } else if (!usedRetry) {
-      setUiState('wrong');
-      setUsedRetry(true);
-      audioManager.playSfx('whoosh');
-      setTimeout(() => setUiState('question'), 1400);
+      // Lucky Clover: first wrong answer is always a silent free retry (no "oops" shown)
+      if (hasLuckyClover) {
+        audioManager.playSfx('pop');
+        setUiState('clover' as UIState);
+        setUsedRetry(true);
+        setTimeout(() => setUiState('question'), 1600);
+      } else {
+        setUiState('wrong');
+        setUsedRetry(true);
+        audioManager.playSfx('whoosh');
+        setTimeout(() => setUiState('question'), 1400);
+      }
     } else {
       setUiState('wrong');
       audioManager.playSfx('whoosh');
       setTimeout(() => onDismiss(), 1400);
     }
+  };
+
+  const handleOpenCalculator = () => {
+    setShowCalculator(true);
+    onCalculatorUsed?.();
+    audioManager.playSfx('pop');
   };
 
   // ── Choice renderers ──────────────────────────────────────────────────────
@@ -291,6 +435,16 @@ export function PuzzleModal({
                   <Text style={styles.hintUsedText}>🏮 One wrong answer lit up!</Text>
                 )}
 
+                {/* Calculator button */}
+                {hasCalculator && (
+                  <TouchableOpacity style={styles.calcBtn} onPress={handleOpenCalculator} activeOpacity={0.8}>
+                    <Text style={styles.calcBtnText}>🧮 Open calculator</Text>
+                  </TouchableOpacity>
+                )}
+                {!hasCalculator && hasLuckyClover && (
+                  <Text style={styles.cloverReady}>🍀 Lucky Clover ready — one free retry!</Text>
+                )}
+
                 <TouchableOpacity style={styles.skipBtn} onPress={onDismiss}>
                   <Text style={styles.skipText}>Maybe later 🌿</Text>
                 </TouchableOpacity>
@@ -324,9 +478,22 @@ export function PuzzleModal({
                 </Text>
               </View>
             )}
+
+            {(uiState as string) === 'clover' && (
+              <View style={styles.feedback}>
+                <Text style={styles.feedbackEmoji}>🍀</Text>
+                <Text style={styles.feedbackTitle}>Lucky save!</Text>
+                <Text style={styles.feedbackSub}>The clover protected you! Try again! ✨</Text>
+              </View>
+            )}
           </LinearGradient>
         </Animated.View>
       </View>
+
+      {/* Calculator overlay — rendered outside card so it floats above */}
+      {showCalculator && (
+        <MiniCalculator onClose={() => setShowCalculator(false)} />
+      )}
     </Modal>
   );
 }
@@ -473,6 +640,29 @@ const styles = StyleSheet.create({
   },
   tfEmoji: { fontSize: 28, marginBottom: 4 },
   tfText: { fontSize: 15, fontWeight: '800', color: C.TEXT_DARK },
+  // Calculator button
+  calcBtn: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderWidth: 2,
+    borderColor: '#1976D2',
+    marginBottom: 8,
+  },
+  calcBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1565C0',
+  },
+  // Lucky clover indicator
+  cloverReady: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2E7D32',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
   // Lantern hint
   hintBtn: {
     backgroundColor: '#FFF9C4',
@@ -537,4 +727,66 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+});
+
+// ── Calculator styles ─────────────────────────────────────────────────────────
+
+const calcStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 99,
+  },
+  container: {
+    backgroundColor: '#263238',
+    borderRadius: 24,
+    padding: 16,
+    width: 280,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 14,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  title: { fontSize: 17, fontWeight: '900', color: '#FFFFFF' },
+  closeBtn: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  closeText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  display: {
+    backgroundColor: '#1C2529',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    minHeight: 64,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  displayText: { fontSize: 14, color: '#78909C', marginBottom: 2 },
+  displayMain: { fontSize: 30, fontWeight: '800', color: '#FFFFFF' },
+  row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  btn: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 14,
+    backgroundColor: '#37474F',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnOp: { backgroundColor: '#F9A825' },
+  btnClear: { backgroundColor: '#D32F2F' },
+  btnEmpty: { backgroundColor: 'transparent' },
+  btnText: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
+  btnOpText: { color: '#1C1C1C' },
 });

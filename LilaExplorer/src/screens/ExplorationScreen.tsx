@@ -92,12 +92,15 @@ export function ExplorationScreen({ route, navigation }: Props) {
     ? (getItemById(equippedOutfit)?.color ?? outfitColor)
     : outfitColor;
 
-  // Only ACTIVE powerups have effects (activePowerups is the user-selected set)
+  // Only ACTIVE powerups have effects (all owned powers auto-activate now)
   const hasPowerup = (id: string) => activePowerups.includes(id);
   const hasBinoculars    = hasPowerup('powerup-binoculars');
   const hasRainBoots     = hasPowerup('powerup-rain-boots');
+  const hasCalculator    = hasPowerup('powerup-calculator');
   const hasLantern       = hasPowerup('powerup-lantern');
+  const hasWhistle       = hasPowerup('powerup-whistle');
   const hasGoldenJournal = hasPowerup('powerup-journal-upgrade');
+  const hasLuckyClover   = hasPowerup('powerup-lucky-clover');
 
   // +1 for the current visit (visitLocation will fire on focus)
   const visitCount = (locationVisitCounts[locationId] ?? 0) + 1;
@@ -132,6 +135,12 @@ export function ExplorationScreen({ route, navigation }: Props) {
   // ── Lantern hint — one per area visit ─────────────────────────
   const [hintAvailable, setHintAvailable] = useState(hasLantern);
   const [hintUsed, setHintUsed] = useState(false);
+
+  // ── Calculator — one per area visit ───────────────────────────
+  const [calcAvailable, setCalcAvailable] = useState(hasCalculator);
+
+  // ── Lucky Clover — one free retry per area visit ───────────────
+  const [cloverAvailable, setCloverAvailable] = useState(hasLuckyClover);
 
   // ── Rain Boots XP toast ───────────────────────────────────────
   const [rainToast, setRainToast] = useState<string | null>(null);
@@ -204,6 +213,8 @@ export function ExplorationScreen({ route, navigation }: Props) {
       }
       setHintAvailable(hasLantern);
       setHintUsed(false);
+      setCalcAvailable(hasCalculator);
+      setCloverAvailable(hasLuckyClover);
     }, [locationId])
   );
 
@@ -396,7 +407,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
       </View>
 
       {/* Active power-up chips */}
-      {(hasBinoculars || hasRainBoots || (hasLantern && hintAvailable) || hasGoldenJournal) && (
+      {(hasBinoculars || hasRainBoots || calcAvailable || (hasLantern && hintAvailable) || hasWhistle || hasGoldenJournal || cloverAvailable) && (
         <View style={styles.powerupChips}>
           {hasBinoculars && (
             <View style={[styles.chip, { backgroundColor: '#E3F2FD' }]}>
@@ -408,14 +419,29 @@ export function ExplorationScreen({ route, navigation }: Props) {
               <Text style={styles.chipText}>🌧️ +25% XP</Text>
             </View>
           )}
+          {calcAvailable && (
+            <View style={[styles.chip, { backgroundColor: '#E3F2FD' }]}>
+              <Text style={styles.chipText}>🧮 calc ready</Text>
+            </View>
+          )}
           {hasLantern && hintAvailable && (
             <View style={[styles.chip, { backgroundColor: '#FFF9C4' }]}>
               <Text style={styles.chipText}>🏮 hint ready</Text>
             </View>
           )}
+          {hasWhistle && (
+            <View style={[styles.chip, { backgroundColor: '#F3E5F5' }]}>
+              <Text style={styles.chipText}>🎵 names shown</Text>
+            </View>
+          )}
           {hasGoldenJournal && (
             <View style={[styles.chip, { backgroundColor: '#FFF8E1' }]}>
               <Text style={styles.chipText}>📒 2× puzzle XP</Text>
+            </View>
+          )}
+          {cloverAvailable && (
+            <View style={[styles.chip, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={styles.chipText}>🍀 retry ready</Text>
             </View>
           )}
         </View>
@@ -454,7 +480,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
               >
                 {/* Name label ABOVE the sprite so it doesn't overlap the ground */}
                 <Text style={styles.animalNameLabel}>
-                  {isDiscovered ? spawned.animal.name.split(' ')[0] : '???'}
+                  {(isDiscovered || hasWhistle) ? spawned.animal.name.split(' ')[0] : '???'}
                 </Text>
 
                 <TouchableOpacity
@@ -631,7 +657,10 @@ export function ExplorationScreen({ route, navigation }: Props) {
           bonusXP={activePuzzle.bonusXP}
           hasLanternHint={hasLantern && hintAvailable}
           hasGoldenJournal={hasGoldenJournal}
+          hasCalculator={hasCalculator && calcAvailable}
+          hasLuckyClover={hasLuckyClover && cloverAvailable}
           onHintUsed={handleHintUsed}
+          onCalculatorUsed={() => setCalcAvailable(false)}
           onCorrect={handlePuzzleCorrect}
           onDismiss={handlePuzzleDismiss}
         />
