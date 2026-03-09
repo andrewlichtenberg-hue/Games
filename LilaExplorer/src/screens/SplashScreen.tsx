@@ -131,12 +131,14 @@ export function SplashScreen({ navigation }: Props) {
           color="gold"
           size="large"
         />
-        {isCharacterCreated && (
+      </Animated.View>
+      {isCharacterCreated && (
+        <Animated.View style={{ opacity: btnOpacity }}>
           <TouchableOpacity onPress={handleNewGame} style={styles.newGameBtn} activeOpacity={0.7}>
             <Text style={styles.newGameText}>Start New Game</Text>
           </TouchableOpacity>
-        )}
-      </Animated.View>
+        </Animated.View>
+      )}
 
       <Text style={styles.footer}>Brooklyn → World 🗺️</Text>
     </LinearGradient>
