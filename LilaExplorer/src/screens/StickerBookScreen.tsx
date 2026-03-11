@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Dimensions,
   Animated,
   PanResponder,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
