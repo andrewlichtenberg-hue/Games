@@ -13,7 +13,8 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.lilaexplorer.app"
+      "bundleIdentifier": "com.lilaexplorer.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
