@@ -99,6 +99,7 @@ export interface GameState {
   earnSticker: (stickerId: string) => void;
   placeStickerOnPage: (pageIndex: number, placement: StickerPlacement) => void;
   removeStickerFromPage: (pageIndex: number, instanceId: string, stickerId: string) => void;
+  moveStickerOnPage: (pageIndex: number, instanceId: string, xPct: number, yPct: number) => void;
   resetGame: () => void;
 }
 
@@ -350,6 +351,16 @@ export const useGameStore = create<GameState>()(
           stickerBookPages: newPages,
           ownedStickers: { ...ownedStickers, [stickerId]: (ownedStickers[stickerId] ?? 0) + 1 },
         });
+      },
+
+      moveStickerOnPage: (pageIndex, instanceId, xPct, yPct) => {
+        const { stickerBookPages } = get();
+        const newPages = stickerBookPages.map((p, i) =>
+          i === pageIndex
+            ? p.map((s) => s.instanceId === instanceId ? { ...s, xPct, yPct } : s)
+            : p
+        );
+        set({ stickerBookPages: newPages });
       },
 
       resetGame: () => set({ ...INITIAL_STATE }),

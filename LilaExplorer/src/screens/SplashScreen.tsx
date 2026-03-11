@@ -82,25 +82,27 @@ export function SplashScreen({ navigation }: Props) {
     <LinearGradient colors={['#6C5CE7', '#A29BFE', '#FD79A8', '#FFEAA7']} style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Floating decorative emojis */}
-      <Animated.Text style={[styles.floatEmoji, styles.e1, { transform: [{ translateY: floatY }] }]}>
-        🌿
-      </Animated.Text>
-      <Animated.Text style={[styles.floatEmoji, styles.e2, { transform: [{ translateY: Animated.multiply(floatY, -0.8) }] }]}>
-        🐿️
-      </Animated.Text>
-      <Animated.Text style={[styles.floatEmoji, styles.e3, { transform: [{ translateY: floatY }] }]}>
-        🌸
-      </Animated.Text>
-      <Animated.Text style={[styles.floatEmoji, styles.e4, { transform: [{ translateY: Animated.multiply(floatY, -1.1) }] }]}>
-        🦊
-      </Animated.Text>
-      <Animated.Text style={[styles.floatEmoji, styles.e5, { transform: [{ translateY: floatY }] }]}>
-        🐻
-      </Animated.Text>
-      <Animated.Text style={[styles.floatEmoji, styles.e6, { transform: [{ translateY: Animated.multiply(floatY, -0.7) }] }]}>
-        🦋
-      </Animated.Text>
+      {/* Floating decorative emojis — pointerEvents none so they don't block buttons */}
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <Animated.Text style={[styles.floatEmoji, styles.e1, { transform: [{ translateY: floatY }] }]}>
+          🌿
+        </Animated.Text>
+        <Animated.Text style={[styles.floatEmoji, styles.e2, { transform: [{ translateY: Animated.multiply(floatY, -0.8) }] }]}>
+          🐿️
+        </Animated.Text>
+        <Animated.Text style={[styles.floatEmoji, styles.e3, { transform: [{ translateY: floatY }] }]}>
+          🌸
+        </Animated.Text>
+        <Animated.Text style={[styles.floatEmoji, styles.e4, { transform: [{ translateY: Animated.multiply(floatY, -1.1) }] }]}>
+          🦊
+        </Animated.Text>
+        <Animated.Text style={[styles.floatEmoji, styles.e5, { transform: [{ translateY: floatY }] }]}>
+          🐻
+        </Animated.Text>
+        <Animated.Text style={[styles.floatEmoji, styles.e6, { transform: [{ translateY: Animated.multiply(floatY, -0.7) }] }]}>
+          🦋
+        </Animated.Text>
+      </View>
 
       {/* Title */}
       <Animated.View
