@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import React from 'react';
+import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -40,7 +41,7 @@ export default function App() {
             initialRouteName="Splash"
             screenOptions={{
               headerShown: false,
-              gestureEnabled: true,
+              gestureEnabled: Platform.OS === 'ios',
               cardStyleInterpolator: ({ current, layouts }) => ({
                 cardStyle: {
                   opacity: current.progress,
