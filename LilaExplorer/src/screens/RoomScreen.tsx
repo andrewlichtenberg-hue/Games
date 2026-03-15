@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as Haptics from 'expo-haptics';
+import Svg, { Circle, Rect, Line } from 'react-native-svg';
 import { LilaCharacter } from '../components/LilaCharacter';
 import { FurnitureSprite } from '../components/FurnitureSprite';
 import { AnimalSprite } from '../components/AnimalSprite';
@@ -23,18 +24,98 @@ import { getItemById } from '../game/items';
 import type { RootStackParamList } from '../../App';
 
 const { width, height } = Dimensions.get('window');
-const ROOM_H = Math.min(340, height * 0.42);
+
+// Room outer dimensions
+const ROOM_H = Math.min(370, height * 0.47);
+const ROOM_W = width - 32; // 16px margin each side
+
+// Furniture grid constants
+const FURN_SIZE = 74;   // px size each furniture SVG renders at
+const FLOOR_H  = 68;    // floor strip height
+const WALL_H   = ROOM_H - FLOOR_H;
+
+// 6-slot grid: 3 columns × 2 rows along the back wall
+const _COL_L = 8;
+const _COL_C = Math.round(ROOM_W / 2 - FURN_SIZE / 2);
+const _COL_R_RIGHT = 8; // use `right:` positioning
+const _ROW1 = 8;
+const _ROW2 = 8 + FURN_SIZE + 8;
+
+const FURNITURE_SLOTS = [
+  { top: _ROW1, left:  _COL_L },       // 0 back-left
+  { top: _ROW1, left:  _COL_C },       // 1 back-center
+  { top: _ROW1, right: _COL_R_RIGHT }, // 2 back-right
+  { top: _ROW2, left:  _COL_L },       // 3 mid-left
+  { top: _ROW2, left:  _COL_C },       // 4 mid-center
+  { top: _ROW2, right: _COL_R_RIGHT }, // 5 mid-right
+] as const;
+
+type Slot = typeof FURNITURE_SLOTS[number];
+
+/** Pixel center of a furniture slot (within the wall area). */
+function slotCenter(slot: Slot): { x: number; y: number } {
+  const x = 'left' in slot && slot.left !== undefined
+    ? slot.left + FURN_SIZE / 2
+    : ROOM_W - (slot as any).right - FURN_SIZE / 2;
+  // Bed mattress centre is roughly 55% down the sprite
+  return { x, y: slot.top + FURN_SIZE * 0.55 };
+}
+
+// ── Decorative sub-components ────────────────────────────────────────────────
+
+/** Wood-plank floor with baseboard */
+function WoodFloor() {
+  const planks = 5;
+  const plankW = ROOM_W / planks;
+  return (
+    <Svg width={ROOM_W} height={FLOOR_H} viewBox={`0 0 ${ROOM_W} ${FLOOR_H}`} style={StyleSheet.absoluteFill}>
+      {/* Main floor colour */}
+      <Rect x={0} y={0} width={ROOM_W} height={FLOOR_H} fill="#D4A86A" />
+      {/* Baseboard strip */}
+      <Rect x={0} y={0} width={ROOM_W} height={7} fill="#8B5E3C" />
+      <Rect x={0} y={7} width={ROOM_W} height={2} fill="#A07040" />
+      {/* Plank dividers */}
+      {Array.from({ length: planks - 1 }, (_, i) => (
+        <Line key={i} x1={(i + 1) * plankW} y1={9} x2={(i + 1) * plankW} y2={FLOOR_H} stroke="#C49060" strokeWidth={1.5} />
+      ))}
+      {/* Grain lines per plank */}
+      {Array.from({ length: planks }, (_, i) => (
+        <Line key={`g${i}`} x1={i * plankW + plankW * 0.3} y1={14} x2={i * plankW + plankW * 0.5} y2={FLOOR_H} stroke="rgba(160,110,50,0.35)" strokeWidth={1} />
+      ))}
+    </Svg>
+  );
+}
+
+/** Pastel polka-dot wallpaper (non-interactive) */
+function WallpaperDots() {
+  const rows = 4, cols = 10;
+  const dots: { x: number; y: number }[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      dots.push({
+        x: (c + 0.5) * (ROOM_W / cols) + (r % 2 === 0 ? 0 : ROOM_W / cols / 2),
+        y: r * (WALL_H / rows) + (WALL_H / rows) / 2,
+      });
+    }
+  }
+  return (
+    <Svg
+      width={ROOM_W}
+      height={WALL_H}
+      viewBox={`0 0 ${ROOM_W} ${WALL_H}`}
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+    >
+      {dots.map((d, i) => (
+        <Circle key={i} cx={d.x} cy={d.y} r={3.5} fill="rgba(255,107,157,0.11)" />
+      ))}
+    </Svg>
+  );
+}
+
+// ── Main screen ──────────────────────────────────────────────────────────────
 
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'Room'> };
-
-// Fixed positions for up to 5 furniture items in the room
-const FURNITURE_SLOTS: Array<{ top?: number; bottom?: number; left?: number; right?: number }> = [
-  { top: 20, left: 18 },
-  { top: 20, right: 18 },
-  { top: 80, left: 18 },
-  { top: 80, right: 18 },
-  { top: 150, left: width / 2 - 30 },
-];
 
 export function RoomScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
@@ -45,7 +126,7 @@ export function RoomScreen({ navigation }: Props) {
   } = useGameStore();
 
   const [interactAnimalId, setInteractAnimalId] = useState<string | null>(null);
-  const [isSleeping, setIsSleeping] = useState(false);
+  const [isSleeping, setIsSleeping]             = useState(false);
   const bounceAnims = useRef<Record<string, Animated.Value>>({}).current;
 
   const activeOutfitColor = equippedOutfit
@@ -69,164 +150,184 @@ export function RoomScreen({ navigation }: Props) {
 
   const interactAnimal = interactAnimalId ? getAnimalById(interactAnimalId) : null;
 
+  // Sleeping-on-bed: compute where to overlay the lying-down character
+  const bedIndex   = equippedFurniture.indexOf('furn-bed');
+  const bedSlot    = bedIndex >= 0 ? FURNITURE_SLOTS[bedIndex % FURNITURE_SLOTS.length] : null;
+  const bedCenter  = bedSlot ? slotCenter(bedSlot) : null;
+
+  // Sleeping sprite dimensions (rotated 90° to lie horizontal)
+  const SLEEP_SIZE = 54;                           // sprite height (= lying width)
+  const SLEEP_W    = SLEEP_SIZE * (100 / 180);     // sprite width  (≈ lying height) ~30px
+
   return (
     <LinearGradient colors={['#FFF3E0', '#FFF9C4', '#E8F5E9']} style={styles.container}>
-      {/* Header */}
+
+      {/* ── Header ─────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>← Home</Text>
         </TouchableOpacity>
         <View>
           <Text style={styles.title}>🏡 {playerName}'s Room</Text>
-          <Text style={styles.subtitle}>{playerName}'s cozy hideout</Text>
+          <Text style={styles.subtitle}>
+            {isSleeping ? '😴 Taking a little nap…' : `${playerName}'s cozy hideout`}
+          </Text>
         </View>
       </View>
 
-      {/* Room */}
+      {/* ── Room ───────────────────────────────────────────────── */}
       <View style={styles.room}>
-        <LinearGradient colors={['#FCE4EC', '#FFF9C4']} style={styles.roomGradient}>
-          {/* Wallpaper stripes (decorative) */}
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            {Array.from({ length: 6 }, (_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.wallStripe,
-                  { left: i * (width / 6), opacity: i % 2 === 0 ? 0.06 : 0 },
-                ]}
-              />
-            ))}
-          </View>
 
-          {/* Furniture */}
+        {/* WALL AREA — furniture + sleeping overlay */}
+        <LinearGradient
+          colors={['#FDEEF7', '#FFF0FB', '#FFFCF0']}
+          style={styles.wallArea}
+          pointerEvents="box-none"
+        >
+          {/* Decorative wallpaper dots */}
+          <WallpaperDots />
+
+          {/* Furniture grid */}
           {equippedFurniture.map((furnId, i) => {
             const item = getItemById(furnId);
             if (!item) return null;
-            const pos = FURNITURE_SLOTS[i % FURNITURE_SLOTS.length];
-            if (furnId === 'furn-bed') {
+            const slot = FURNITURE_SLOTS[i % FURNITURE_SLOTS.length];
+            const isBed = furnId === 'furn-bed';
+            const inner = (
+              <>
+                <FurnitureSprite furnId={furnId} size={FURN_SIZE} />
+                <Text style={styles.furnName}>
+                  {isBed && isSleeping ? '😴' : item.name}
+                </Text>
+              </>
+            );
+            if (isBed) {
               return (
                 <TouchableOpacity
                   key={furnId}
-                  style={[styles.furnItem, pos]}
+                  style={[styles.furnItem, slot]}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    setIsSleeping((s) => !s);
+                    setIsSleeping(s => !s);
                   }}
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                 >
-                  <FurnitureSprite furnId={furnId} size={70} />
-                  <Text style={styles.furnName}>{isSleeping ? '😴 Napping...' : item.name}</Text>
+                  {inner}
                 </TouchableOpacity>
               );
             }
             return (
-              <View key={furnId} style={[styles.furnItem, pos]}>
-                <FurnitureSprite furnId={furnId} size={60} />
-                <Text style={styles.furnName}>{item.name}</Text>
+              <View key={furnId} style={[styles.furnItem, slot]}>
+                {inner}
               </View>
             );
           })}
 
-          {/* Floor */}
-          <View style={styles.floor} />
-
-          {/* Lila — standing or sleeping on the bed */}
-          <View style={styles.lilaPos}>
-            {isSleeping ? (
-              <View style={styles.sleepingWrapper}>
-                <View style={styles.sleepingCharacter}>
-                  <LilaCharacter
-                    hairColor={hairColor}
-                    skinTone={skinTone}
-                    outfitColor={activeOutfitColor}
-                    equippedHat={equippedHat}
-                    size={80}
-                  />
-                </View>
-                <Text style={styles.zzzText}>💤</Text>
+          {/* Sleeping Lila overlaid on the bed */}
+          {isSleeping && bedCenter && (
+            <>
+              {/* Character lying horizontally on the mattress */}
+              <View
+                style={{
+                  position: 'absolute',
+                  // Center the pre-rotation bounding box over the mattress
+                  top:  bedCenter.y - SLEEP_SIZE / 2,
+                  left: bedCenter.x - SLEEP_W / 2,
+                  zIndex: 6,
+                  transform: [{ rotate: '90deg' }],
+                }}
+              >
+                <LilaCharacter
+                  hairColor={hairColor}
+                  skinTone={skinTone}
+                  outfitColor={activeOutfitColor}
+                  equippedHat={null}
+                  size={SLEEP_SIZE}
+                />
               </View>
-            ) : (
+              {/* Floating ZZZ bubble */}
+              <Text
+                style={{
+                  position: 'absolute',
+                  top:  bedCenter.y - SLEEP_SIZE / 2 - 20,
+                  left: bedCenter.x + SLEEP_W / 2 + 2,
+                  zIndex: 7,
+                  fontSize: 15,
+                }}
+              >
+                💤
+              </Text>
+            </>
+          )}
+        </LinearGradient>
+
+        {/* FLOOR AREA — character + companions */}
+        <View style={styles.floorArea}>
+          <WoodFloor />
+
+          {/* Lila standing (hidden while sleeping) */}
+          {!isSleeping && (
+            <View style={styles.lilaPos}>
               <LilaCharacter
                 hairColor={hairColor}
                 skinTone={skinTone}
                 outfitColor={activeOutfitColor}
                 equippedHat={equippedHat}
-                size={120}
+                size={112}
               />
-            )}
-          </View>
+            </View>
+          )}
 
-          {/* Companion animals — up to 6 visible in the room */}
+          {/* Companion animals spread along the floor */}
           {companionAnimals.slice(0, 6).map((id, i) => {
             const animal = getAnimalById(id);
             if (!animal) return null;
-            const bounce = getOrCreateBounce(id);
-            // Spread animals left and right of Lila along the floor
-            const side = i % 2 === 0 ? 'left' : 'right';
-            const offset = Math.floor(i / 2) * 72 + 16;
-            const pos = side === 'left'
-              ? { left: offset, bottom: 28 }
-              : { right: offset, bottom: 28 };
-
+            const bounce   = getOrCreateBounce(id);
+            const side     = i % 2 === 0 ? 'left' : 'right';
+            const offset   = Math.floor(i / 2) * 66 + 10;
+            const animalPos = side === 'left'
+              ? { left: offset, bottom: 6 }
+              : { right: offset, bottom: 6 };
             return (
               <Animated.View
                 key={id}
-                style={[
-                  styles.companionInRoom,
-                  pos,
-                  { transform: [{ translateY: bounce }] },
-                ]}
+                style={[styles.companionInRoom, animalPos, { transform: [{ translateY: bounce }] }]}
               >
-                <TouchableOpacity
-                  onPress={() => handleAnimalTap(id, animal)}
-                  activeOpacity={0.85}
-                >
+                <TouchableOpacity onPress={() => handleAnimalTap(id, animal)} activeOpacity={0.85}>
                   <AnimalSprite
                     type={animal.type}
-                    size={52}
+                    size={48}
                     bodyColor={animal.bodyColor}
                     accentColor={animal.accentColor}
                   />
                 </TouchableOpacity>
-                <Text style={styles.companionNameLabel}>
-                  {animal.name.split(' ')[0]}
-                </Text>
-                <Text style={styles.companionTapHint}>tap me!</Text>
+                <Text style={styles.companionNameLabel}>{animal.name.split(' ')[0]}</Text>
+                <Text style={styles.companionTapHint}>tap!</Text>
               </Animated.View>
             );
           })}
 
-          {/* Empty state */}
           {companionAnimals.length === 0 && (
             <View style={styles.emptyRoom}>
               <Text style={styles.emptyRoomText}>
-                Find animal friends by exploring!{'\n'}Max friendship → they move in! 🌿
+                Explore to find animal friends!{'\n'}Max friendship → they move in 🌿
               </Text>
             </View>
           )}
-        </LinearGradient>
+        </View>
       </View>
 
-      {/* Overflow companions (beyond 6) — scrollable strip */}
+      {/* Overflow companions (> 6) */}
       {companionAnimals.length > 6 && (
         <View style={styles.overflowSection}>
           <Text style={styles.overflowTitle}>Also here:</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.overflowScroll}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.overflowScroll}>
             {companionAnimals.slice(6).map((id) => {
               const animal = getAnimalById(id);
               if (!animal) return null;
               return (
                 <View key={id} style={styles.overflowItem}>
-                  <AnimalSprite
-                    type={animal.type}
-                    size={40}
-                    bodyColor={animal.bodyColor}
-                    accentColor={animal.accentColor}
-                  />
+                  <AnimalSprite type={animal.type} size={40} bodyColor={animal.bodyColor} accentColor={animal.accentColor} />
                   <Text style={styles.overflowName}>{animal.name.split(' ')[0]}</Text>
                 </View>
               );
@@ -235,31 +336,24 @@ export function RoomScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* Furniture & companion counts */}
+      {/* Stats / nav strip */}
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
           <Text style={styles.statNum}>{companionAnimals.length}</Text>
           <Text style={styles.statLabel}>Companions</Text>
         </View>
         <View style={styles.statDivider} />
-        <TouchableOpacity
-          style={styles.statItem}
-          onPress={() => navigation.navigate('StickerBook')}
-        >
+        <TouchableOpacity style={styles.statItem} onPress={() => navigation.navigate('StickerBook')}>
           <Text style={styles.statNum}>📖</Text>
           <Text style={[styles.statLabel, { color: C.UI_PRIMARY }]}>Stickers</Text>
         </TouchableOpacity>
         <View style={styles.statDivider} />
-        <TouchableOpacity
-          style={styles.statItem}
-          onPress={() => navigation.navigate('Wardrobe')}
-        >
+        <TouchableOpacity style={styles.statItem} onPress={() => navigation.navigate('Wardrobe')}>
           <Text style={styles.statNum}>🏡</Text>
           <Text style={[styles.statLabel, { color: C.UI_PRIMARY }]}>Decorate</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Companion interaction modal */}
       {interactAnimal && (
         <CompanionInteractionModal
           visible
@@ -273,142 +367,110 @@ export function RoomScreen({ navigation }: Props) {
   );
 }
 
+// ── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  backBtn: { marginBottom: 6 },
-  backText: { fontSize: 15, fontWeight: '700', color: C.TEXT_MID },
-  title: { fontSize: 26, fontWeight: '900', color: C.TEXT_DARK },
-  subtitle: { fontSize: 13, color: C.TEXT_MID, fontWeight: '600', marginTop: 2 },
+
+  header:    { paddingHorizontal: 16, paddingBottom: 12 },
+  backBtn:   { marginBottom: 6 },
+  backText:  { fontSize: 15, fontWeight: '700', color: C.TEXT_MID },
+  title:     { fontSize: 26, fontWeight: '900', color: C.TEXT_DARK },
+  subtitle:  { fontSize: 13, color: C.TEXT_MID, fontWeight: '600', marginTop: 2 },
+
   room: {
     marginHorizontal: 16,
     height: ROOM_H,
     borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    elevation: 6,
   },
-  roomGradient: {
-    flex: 1,
+
+  // Upper wall region (furniture lives here)
+  wallArea: {
+    height: WALL_H,
     position: 'relative',
   },
-  wallStripe: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: width / 6,
-    backgroundColor: '#FF6B9D',
+  // Lower floor region (character + animals live here)
+  floorArea: {
+    height: FLOOR_H,
+    position: 'relative',
+    overflow: 'visible', // allow Lila to extend upward into wall area
   },
+
   furnItem: {
     position: 'absolute',
     alignItems: 'center',
     zIndex: 2,
   },
   furnName: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '700',
     color: C.TEXT_MID,
     marginTop: 2,
     textAlign: 'center',
-    maxWidth: 60,
+    maxWidth: FURN_SIZE,
   },
-  floor: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 32,
-    backgroundColor: '#D4B483',
-    borderTopWidth: 3,
-    borderTopColor: '#B8935A',
-    zIndex: 1,
-  },
+
   lilaPos: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 0,
     alignSelf: 'center',
     zIndex: 3,
   },
-  sleepingWrapper: {
-    alignItems: 'center',
-  },
-  sleepingCharacter: {
-    transform: [{ rotate: '90deg' }],
-  },
-  zzzText: {
-    fontSize: 20,
-    marginTop: 4,
-    textAlign: 'center',
-  },
+
   companionInRoom: {
     position: 'absolute',
     alignItems: 'center',
     zIndex: 3,
   },
   companionNameLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '700',
     color: C.TEXT_MID,
-    marginTop: 2,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 6,
-    paddingHorizontal: 4,
+    marginTop: 1,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderRadius: 5,
+    paddingHorizontal: 3,
     paddingVertical: 1,
   },
   companionTapHint: {
-    fontSize: 8,
+    fontSize: 7,
     color: C.UI_PRIMARY,
     fontWeight: '700',
-    marginTop: 1,
     textAlign: 'center',
   },
+
   emptyRoom: {
     position: 'absolute',
-    bottom: 60,
+    top: 4,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   emptyRoomText: {
-    fontSize: 13,
+    fontSize: 12,
     color: C.TEXT_MID,
     fontStyle: 'italic',
     textAlign: 'center',
     paddingHorizontal: 20,
-    lineHeight: 20,
+    lineHeight: 18,
   },
-  overflowSection: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-  },
-  overflowTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.TEXT_MID,
-    marginBottom: 6,
-  },
-  overflowScroll: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingBottom: 4,
-  },
-  overflowItem: { alignItems: 'center' },
-  overflowName: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: C.TEXT_MID,
-    marginTop: 2,
-  },
+
+  overflowSection: { marginTop: 10, paddingHorizontal: 16 },
+  overflowTitle:   { fontSize: 12, fontWeight: '700', color: C.TEXT_MID, marginBottom: 6 },
+  overflowScroll:  { flexDirection: 'row', gap: 12, paddingBottom: 4 },
+  overflowItem:    { alignItems: 'center' },
+  overflowName:    { fontSize: 9, fontWeight: '700', color: C.TEXT_MID, marginTop: 2 },
+
   statsRow: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 10,
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 14,
@@ -417,8 +479,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  statItem: { flex: 1, alignItems: 'center' },
-  statNum: { fontSize: 22, fontWeight: '900', color: C.UI_PRIMARY },
-  statLabel: { fontSize: 11, color: C.TEXT_MID, fontWeight: '600', marginTop: 2 },
+  statItem:   { flex: 1, alignItems: 'center' },
+  statNum:    { fontSize: 22, fontWeight: '900', color: C.UI_PRIMARY },
+  statLabel:  { fontSize: 11, color: C.TEXT_MID, fontWeight: '600', marginTop: 2 },
   statDivider: { width: 1, backgroundColor: '#EEE', marginVertical: 4 },
 });

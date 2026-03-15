@@ -326,6 +326,9 @@ class AudioManagerClass {
 
   // ── Shared state ────────────────────────────────────────────────────────────
   private currentTrack: TrackName | null = null;
+  // Monotonically-increasing counter; each playMusic/stopMusic call increments
+  // it so any in-flight async call that resolves late can detect it is stale.
+  private playGen = 0;
 
   // ── Web Audio helpers ───────────────────────────────────────────────────────
 
@@ -422,6 +425,7 @@ class AudioManagerClass {
   async playMusic(track: TrackName) {
     if (this.currentTrack === track) return;
     this.currentTrack = track;
+    const gen = ++this.playGen; // snapshot generation for this call
 
     if (isNative) {
       await this.playNative(track);
@@ -432,7 +436,8 @@ class AudioManagerClass {
     this._clearLoop();
     try {
       const ctx = await this.getCtxReady(); // ← critical: await resume!
-      if (this.currentTrack !== track) return; // guard against race
+      // Guard: stale if another playMusic/stopMusic ran while we awaited
+      if (this.playGen !== gen) return;
       if (this.musicGain) {
         this.musicGain.gain.setTargetAtTime(this.masterVolume, ctx.currentTime, 0.1);
       }
@@ -445,6 +450,7 @@ class AudioManagerClass {
 
   async stopMusic() {
     this.currentTrack = null;
+    ++this.playGen; // invalidate any in-flight playMusic awaits
     if (isNative) {
       await this.stopNative();
       return;
