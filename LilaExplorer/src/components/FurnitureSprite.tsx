@@ -23,52 +23,61 @@ export function FurnitureSprite({ furnId, size = 80 }: FurnitureSpriteProps) {
 type Renderer = () => React.ReactNode;
 
 // ── furn-bed ──────────────────────────────────────────────────────────────────
+// Drawn with pseudo-3D perspective: top surface + visible front face panel.
 function renderBed(): React.ReactNode {
   return (
     <G>
-      {/* Bed frame sides */}
-      <Rect x={8} y={42} width={84} height={46} rx={3} fill="#8B5E3C" />
-      {/* Mattress */}
-      <Rect x={12} y={44} width={76} height={38} rx={3} fill="#F5EFE6" />
-      {/* Mattress border detail */}
-      <Rect x={14} y={46} width={72} height={34} rx={2} fill="none" stroke="#DDD5C8" strokeWidth={1.5} />
+      {/* === HEADBOARD — back shadow for depth === */}
+      <Rect x={12} y={4} width={78} height={32} rx={5} fill="#5A2E10" />
+      {/* === HEADBOARD — front face === */}
+      <Rect x={8} y={7} width={78} height={32} rx={5} fill="#8B5E3C" />
+      {/* Headboard top highlight (the top edge you see from slightly above) */}
+      <Path d="M 8,7 L 86,7 L 90,4 L 12,4 Z" fill="#A07040" />
+      {/* Wood grain */}
+      <Line x1={22} y1={10} x2={20} y2={37} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
+      <Line x1={35} y1={9} x2={33} y2={37} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
+      <Line x1={50} y1={8} x2={50} y2={37} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
+      <Line x1={65} y1={9} x2={67} y2={37} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
+      <Line x1={78} y1={10} x2={80} y2={37} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
 
-      {/* Nature-print blanket (folded over top half) */}
-      <Rect x={12} y={44} width={76} height={22} rx={3} fill="#5CB85C" />
+      {/* === BED FRAME — top surface (the rim you see from above) === */}
+      <Rect x={5} y={37} width={90} height={48} rx={4} fill="#8B5E3C" />
+
+      {/* === MATTRESS — top view === */}
+      <Rect x={9} y={39} width={82} height={40} rx={3} fill="#F5EFE6" />
+      <Rect x={11} y={41} width={78} height={36} rx={2} fill="none" stroke="#DDD5C8" strokeWidth={1.5} />
+
+      {/* === BLANKET (folded over pillow half) === */}
+      <Rect x={9} y={39} width={82} height={24} rx={3} fill="#5CB85C" />
       {/* Leaf shapes on blanket */}
-      <Ellipse cx={28} cy={52} rx={5} ry={3} fill="#3D8B3D" transform="rotate(-30 28 52)" />
-      <Ellipse cx={44} cy={48} rx={5} ry={3} fill="#3D8B3D" transform="rotate(20 44 48)" />
-      <Ellipse cx={60} cy={54} rx={5} ry={3} fill="#3D8B3D" transform="rotate(-15 60 54)" />
-      <Ellipse cx={76} cy={50} rx={5} ry={3} fill="#3D8B3D" transform="rotate(35 76 50)" />
-      <Ellipse cx={36} cy={60} rx={4} ry={2.5} fill="#3D8B3D" transform="rotate(10 36 60)" />
-      <Ellipse cx={52} cy={57} rx={4} ry={2.5} fill="#3D8B3D" transform="rotate(-25 52 57)" />
-      <Ellipse cx={68} cy={61} rx={4} ry={2.5} fill="#3D8B3D" transform="rotate(15 68 61)" />
-      {/* Leaf vein lines */}
-      <Line x1={25} y1={52} x2={31} y2={52} stroke="#2E7D32" strokeWidth={0.8} />
-      <Line x1={41} y1={48} x2={47} y2={48} stroke="#2E7D32" strokeWidth={0.8} />
-      <Line x1={57} y1={54} x2={63} y2={54} stroke="#2E7D32" strokeWidth={0.8} />
+      <Ellipse cx={26} cy={48} rx={5} ry={3} fill="#3D8B3D" transform="rotate(-30 26 48)" />
+      <Ellipse cx={42} cy={44} rx={5} ry={3} fill="#3D8B3D" transform="rotate(20 42 44)" />
+      <Ellipse cx={58} cy={50} rx={5} ry={3} fill="#3D8B3D" transform="rotate(-15 58 50)" />
+      <Ellipse cx={74} cy={46} rx={5} ry={3} fill="#3D8B3D" transform="rotate(35 74 46)" />
+      <Line x1={23} y1={48} x2={29} y2={48} stroke="#2E7D32" strokeWidth={0.8} />
+      <Line x1={39} y1={44} x2={45} y2={44} stroke="#2E7D32" strokeWidth={0.8} />
+      <Line x1={55} y1={50} x2={61} y2={50} stroke="#2E7D32" strokeWidth={0.8} />
 
-      {/* Two pillows */}
-      <Rect x={15} y={45} width={28} height={15} rx={5} fill="#FFF8E1" />
-      <Rect x={48} y={45} width={28} height={15} rx={5} fill="#FFF8E1" />
-      {/* Pillow crease lines */}
-      <Line x1={18} y1={52} x2={40} y2={52} stroke="#E8DFC8" strokeWidth={1} />
-      <Line x1={51} y1={52} x2={73} y2={52} stroke="#E8DFC8" strokeWidth={1} />
+      {/* === PILLOWS === */}
+      <Rect x={12} y={40} width={28} height={15} rx={5} fill="#FFF8E1" />
+      <Rect x={56} y={40} width={28} height={15} rx={5} fill="#FFF8E1" />
+      <Line x1={15} y1={47} x2={37} y2={47} stroke="#E8DFC8" strokeWidth={1} />
+      <Line x1={59} y1={47} x2={81} y2={47} stroke="#E8DFC8" strokeWidth={1} />
 
-      {/* Headboard */}
-      <Rect x={8} y={18} width={84} height={30} rx={5} fill="#7B4F2E" />
-      {/* Headboard arch cutout shape (decorative top) */}
-      <Path d="M 18,18 Q 50,6 82,18 Z" fill="#6A3F22" />
-      {/* Wood grain lines on headboard */}
-      <Line x1={22} y1={20} x2={20} y2={46} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
-      <Line x1={35} y1={19} x2={33} y2={46} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
-      <Line x1={50} y1={18} x2={50} y2={46} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
-      <Line x1={65} y1={19} x2={67} y2={46} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
-      <Line x1={78} y1={20} x2={80} y2={46} stroke="#6A3F22" strokeWidth={1.2} strokeLinecap="round" />
+      {/* === FRONT FACE — the key 3D depth element === */}
+      {/* This panel shows the HEIGHT of the bed frame, making it look 3D */}
+      <Rect x={5} y={83} width={90} height={11} rx={3} fill="#6A3F22" />
+      {/* Top highlight on front face (catches light) */}
+      <Rect x={5} y={83} width={90} height={3} rx={2} fill="#9B6040" />
+      {/* Subtle vertical grain on front face */}
+      <Line x1={22} y1={84} x2={22} y2={93} stroke="#5A3010" strokeWidth={0.8} />
+      <Line x1={42} y1={84} x2={42} y2={93} stroke="#5A3010" strokeWidth={0.8} />
+      <Line x1={62} y1={84} x2={62} y2={93} stroke="#5A3010" strokeWidth={0.8} />
+      <Line x1={78} y1={84} x2={78} y2={93} stroke="#5A3010" strokeWidth={0.8} />
 
-      {/* Bed legs */}
-      <Rect x={10} y={84} width={8} height={12} rx={2} fill="#7B4F2E" />
-      <Rect x={82} y={84} width={8} height={12} rx={2} fill="#7B4F2E" />
+      {/* === LEGS === */}
+      <Rect x={7} y={92} width={8} height={8} rx={2} fill="#5A3010" />
+      <Rect x={85} y={92} width={8} height={8} rx={2} fill="#5A3010" />
     </G>
   );
 }

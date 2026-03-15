@@ -4,7 +4,7 @@
  * Optional accessory overlays (hat, held item).
  * outfitColor may be 'rainbow' for the Rainbow Rain Jacket.
  */
-import React from 'react';
+import React, { useRef } from 'react';
 import Svg, {
   Circle,
   Ellipse,
@@ -33,6 +33,11 @@ export function LilaCharacter({
   size = 120,
   facing = 'right',
 }: LilaCharacterProps) {
+  // Unique gradient IDs per instance — prevents cross-SVG gradient collisions
+  // when multiple LilaCharacter instances are mounted simultaneously.
+  const uidRef = useRef(`lc${(Math.random() * 1e9 | 0).toString(36)}`);
+  const uid = uidRef.current;
+
   const W = 100;
   const H = 180;
   const scale = size / H;
@@ -51,16 +56,16 @@ export function LilaCharacter({
   return (
     <Svg width={svgW} height={svgH} viewBox={`0 0 ${W} ${H}`}>
       <Defs>
-        <LinearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={`${uid}s`} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={skinTone} />
           <Stop offset="1" stopColor={skinDark} />
         </LinearGradient>
-        <LinearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={`${uid}h`} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={lighten(hairColor, 0.15)} />
           <Stop offset="1" stopColor={hairColor} />
         </LinearGradient>
         {isRainbow ? (
-          <LinearGradient id="outfitGrad" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={`${uid}o`} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0"    stopColor="#FF4444" />
             <Stop offset="0.2"  stopColor="#FF8C00" />
             <Stop offset="0.4"  stopColor="#FFD700" />
@@ -69,7 +74,7 @@ export function LilaCharacter({
             <Stop offset="1"    stopColor="#9B59B6" />
           </LinearGradient>
         ) : (
-          <LinearGradient id="outfitGrad" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={`${uid}o`} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={lighten(outfitColor, 0.1)} />
             <Stop offset="1" stopColor={outfitColor} />
           </LinearGradient>
@@ -92,7 +97,7 @@ export function LilaCharacter({
           d="M 22,115 Q 30,138 50,138 Q 70,138 78,115 Z"
           fill={isRainbow ? '#9B59B6' : outfitColor}
         />
-        <Rect x={28} y={74} width={44} height={48} rx={12} fill="url(#outfitGrad)" />
+        <Rect x={28} y={74} width={44} height={48} rx={12} fill={`url(#${uid}o)`} />
         <Path
           d="M 38,74 Q 50,84 62,74"
           stroke="rgba(255,255,255,0.5)"
@@ -101,41 +106,41 @@ export function LilaCharacter({
         />
 
         {/* ── ARMS ────────────────────────────────────── */}
-        <Rect x={72} y={76} width={14} height={34} rx={7} fill="url(#outfitGrad)" />
-        <Circle cx={79} cy={111} r={9} fill="url(#skinGrad)" />
-        <Rect x={14} y={76} width={14} height={34} rx={7} fill="url(#outfitGrad)" />
-        <Circle cx={21} cy={111} r={9} fill="url(#skinGrad)" />
+        <Rect x={72} y={76} width={14} height={34} rx={7} fill={`url(#${uid}o)`} />
+        <Circle cx={79} cy={111} r={9} fill={`url(#${uid}s)`} />
+        <Rect x={14} y={76} width={14} height={34} rx={7} fill={`url(#${uid}o)`} />
+        <Circle cx={21} cy={111} r={9} fill={`url(#${uid}s)`} />
 
         {/* ── NECK ────────────────────────────────────── */}
-        <Rect x={43} y={64} width={14} height={14} rx={5} fill="url(#skinGrad)" />
+        <Rect x={43} y={64} width={14} height={14} rx={5} fill={`url(#${uid}s)`} />
 
         {/* ── HEAD ────────────────────────────────────── */}
-        <Circle cx={50} cy={42} r={28} fill="url(#skinGrad)" />
+        <Circle cx={50} cy={42} r={28} fill={`url(#${uid}s)`} />
 
         {/* ── HAIR (back layer) ───────────────────────── */}
         <Path
           d="M 24,32 Q 20,70 22,90 Q 28,95 30,88 Q 26,68 28,36 Z"
-          fill="url(#hairGrad)"
+          fill={`url(#${uid}h)`}
         />
 
         {/* ── EARS ────────────────────────────────────── */}
-        <Circle cx={22} cy={44} r={7} fill="url(#skinGrad)" />
-        <Circle cx={78} cy={44} r={7} fill="url(#skinGrad)" />
+        <Circle cx={22} cy={44} r={7} fill={`url(#${uid}s)`} />
+        <Circle cx={78} cy={44} r={7} fill={`url(#${uid}s)`} />
         <Circle cx={22} cy={44} r={4} fill={darken(skinTone, 0.08)} />
         <Circle cx={78} cy={44} r={4} fill={darken(skinTone, 0.08)} />
 
         {/* ── HAIR (front) ────────────────────────────── */}
         <Path
           d="M 22,36 Q 26,10 50,12 Q 74,10 78,36 Q 74,18 50,16 Q 26,18 22,36 Z"
-          fill="url(#hairGrad)"
+          fill={`url(#${uid}h)`}
         />
         <Path
           d="M 22,36 Q 18,42 20,50 Q 24,46 26,40 Z"
-          fill="url(#hairGrad)"
+          fill={`url(#${uid}h)`}
         />
         <Path
           d="M 74,30 Q 86,28 88,42 Q 86,54 78,52 Q 80,44 82,38 Q 80,30 74,30 Z"
-          fill="url(#hairGrad)"
+          fill={`url(#${uid}h)`}
         />
         <Path
           d="M 36,14 Q 50,12 60,15"

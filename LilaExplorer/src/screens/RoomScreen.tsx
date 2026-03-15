@@ -45,6 +45,7 @@ export function RoomScreen({ navigation }: Props) {
   } = useGameStore();
 
   const [interactAnimalId, setInteractAnimalId] = useState<string | null>(null);
+  const [isSleeping, setIsSleeping] = useState(false);
   const bounceAnims = useRef<Record<string, Animated.Value>>({}).current;
 
   const activeOutfitColor = equippedOutfit
@@ -102,6 +103,22 @@ export function RoomScreen({ navigation }: Props) {
             const item = getItemById(furnId);
             if (!item) return null;
             const pos = FURNITURE_SLOTS[i % FURNITURE_SLOTS.length];
+            if (furnId === 'furn-bed') {
+              return (
+                <TouchableOpacity
+                  key={furnId}
+                  style={[styles.furnItem, pos]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setIsSleeping((s) => !s);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <FurnitureSprite furnId={furnId} size={70} />
+                  <Text style={styles.furnName}>{isSleeping ? '😴 Napping...' : item.name}</Text>
+                </TouchableOpacity>
+              );
+            }
             return (
               <View key={furnId} style={[styles.furnItem, pos]}>
                 <FurnitureSprite furnId={furnId} size={60} />
@@ -113,15 +130,30 @@ export function RoomScreen({ navigation }: Props) {
           {/* Floor */}
           <View style={styles.floor} />
 
-          {/* Lila standing in center */}
+          {/* Lila — standing or sleeping on the bed */}
           <View style={styles.lilaPos}>
-            <LilaCharacter
-              hairColor={hairColor}
-              skinTone={skinTone}
-              outfitColor={activeOutfitColor}
-              equippedHat={equippedHat}
-              size={120}
-            />
+            {isSleeping ? (
+              <View style={styles.sleepingWrapper}>
+                <View style={styles.sleepingCharacter}>
+                  <LilaCharacter
+                    hairColor={hairColor}
+                    skinTone={skinTone}
+                    outfitColor={activeOutfitColor}
+                    equippedHat={equippedHat}
+                    size={80}
+                  />
+                </View>
+                <Text style={styles.zzzText}>💤</Text>
+              </View>
+            ) : (
+              <LilaCharacter
+                hairColor={hairColor}
+                skinTone={skinTone}
+                outfitColor={activeOutfitColor}
+                equippedHat={equippedHat}
+                size={120}
+              />
+            )}
           </View>
 
           {/* Companion animals — up to 6 visible in the room */}
@@ -302,6 +334,17 @@ const styles = StyleSheet.create({
     bottom: 28,
     alignSelf: 'center',
     zIndex: 3,
+  },
+  sleepingWrapper: {
+    alignItems: 'center',
+  },
+  sleepingCharacter: {
+    transform: [{ rotate: '90deg' }],
+  },
+  zzzText: {
+    fontSize: 20,
+    marginTop: 4,
+    textAlign: 'center',
   },
   companionInRoom: {
     position: 'absolute',
