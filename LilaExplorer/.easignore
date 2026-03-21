@@ -1,0 +1,4 @@
+# Exclude from EAS build uploads
+docs/
+.github/
+*.md
