@@ -14,7 +14,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.lilaexplorer.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +27,10 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.lilaexplorer.app"
+      "package": "com.lilaexplorer.app",
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -35,13 +41,18 @@
       "baseUrl": "/Games"
     },
     "plugins": [
-      "./plugins/withExpoAvPatch",
       [
         "expo-av",
         {
           "microphonePermission": false
         }
-      ]
-    ]
+      ],
+      "./plugins/withExpoAvPatch"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a02aa739-ac5d-4c7b-8bca-0675118a2d1a"
+      }
+    }
   }
 }
