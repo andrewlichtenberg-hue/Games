@@ -1,8 +1,12 @@
 /**
- * LilaCharacter — SVG-drawn customizable girl sprite.
- * All appearance driven by props (hairColor, skinTone, outfitColor).
+ * LilaCharacter — SVG-drawn customizable sprite (girl or boy).
+ * All appearance driven by props (gender, hairstyle, hairColor, skinTone, outfitColor).
  * Optional accessory overlays (hat, held item).
  * outfitColor may be 'rainbow' for the Rainbow Rain Jacket.
+ *
+ * Hairstyles (1–3):
+ *   Girl 1: Long Straight  Girl 2: Pigtails  Girl 3: Wavy Bob
+ *   Boy  1: Short Tidy     Boy  2: Spiky      Boy  3: Wavy Sweep
  */
 import React, { useRef } from 'react';
 import Svg, {
@@ -17,6 +21,8 @@ import Svg, {
 } from 'react-native-svg';
 
 interface LilaCharacterProps {
+  gender?: 'girl' | 'boy';
+  hairstyle?: number;  // 1, 2, or 3
   hairColor?: string;
   skinTone?: string;
   outfitColor?: string;
@@ -26,6 +32,8 @@ interface LilaCharacterProps {
 }
 
 export function LilaCharacter({
+  gender = 'girl',
+  hairstyle = 1,
   hairColor = '#F4D03F',
   skinTone = '#F1C27D',
   outfitColor = '#FF6B9D',
@@ -45,13 +53,15 @@ export function LilaCharacter({
   const svgH = H * scale;
   const flip = facing === 'left' ? `scale(-1,1) translate(-${W},0)` : undefined;
 
-  // Rainbow outfit special handling
   const isRainbow = outfitColor === 'rainbow';
-
-  // Derived shoe / pant colors — safe against non-hex 'rainbow' string
   const shoeColor = isRainbow ? '#FF4444' : outfitColor;
   const pantColor = isRainbow ? '#7C3AED' : darken(outfitColor, 0.25);
   const skinDark = darken(skinTone, 0.15);
+  const hairGrad = `url(#${uid}h)`;
+  const skinGrad = `url(#${uid}s)`;
+  const outfitGrad = `url(#${uid}o)`;
+
+  const style = Math.max(1, Math.min(3, hairstyle));
 
   return (
     <Svg width={svgW} height={svgH} viewBox={`0 0 ${W} ${H}`}>
@@ -92,12 +102,14 @@ export function LilaCharacter({
         <Ellipse cx={35} cy={161} rx={5} ry={2.5} fill="rgba(255,255,255,0.3)" />
         <Ellipse cx={59} cy={161} rx={5} ry={2.5} fill="rgba(255,255,255,0.3)" />
 
-        {/* ── BODY / DRESS ────────────────────────────── */}
-        <Path
-          d="M 22,115 Q 30,138 50,138 Q 70,138 78,115 Z"
-          fill={isRainbow ? '#9B59B6' : outfitColor}
-        />
-        <Rect x={28} y={74} width={44} height={48} rx={12} fill={`url(#${uid}o)`} />
+        {/* ── BODY ────────────────────────────────────── */}
+        {gender === 'girl' && (
+          <Path
+            d="M 22,115 Q 30,138 50,138 Q 70,138 78,115 Z"
+            fill={isRainbow ? '#9B59B6' : outfitColor}
+          />
+        )}
+        <Rect x={28} y={74} width={44} height={48} rx={12} fill={outfitGrad} />
         <Path
           d="M 38,74 Q 50,84 62,74"
           stroke="rgba(255,255,255,0.5)"
@@ -106,49 +118,32 @@ export function LilaCharacter({
         />
 
         {/* ── ARMS ────────────────────────────────────── */}
-        <Rect x={72} y={76} width={14} height={34} rx={7} fill={`url(#${uid}o)`} />
-        <Circle cx={79} cy={111} r={9} fill={`url(#${uid}s)`} />
-        <Rect x={14} y={76} width={14} height={34} rx={7} fill={`url(#${uid}o)`} />
-        <Circle cx={21} cy={111} r={9} fill={`url(#${uid}s)`} />
+        <Rect x={72} y={76} width={14} height={34} rx={7} fill={outfitGrad} />
+        <Circle cx={79} cy={111} r={9} fill={skinGrad} />
+        <Rect x={14} y={76} width={14} height={34} rx={7} fill={outfitGrad} />
+        <Circle cx={21} cy={111} r={9} fill={skinGrad} />
 
         {/* ── NECK ────────────────────────────────────── */}
-        <Rect x={43} y={64} width={14} height={14} rx={5} fill={`url(#${uid}s)`} />
+        <Rect x={43} y={64} width={14} height={14} rx={5} fill={skinGrad} />
 
         {/* ── HEAD ────────────────────────────────────── */}
-        <Circle cx={50} cy={42} r={28} fill={`url(#${uid}s)`} />
+        <Circle cx={50} cy={42} r={28} fill={skinGrad} />
 
-        {/* ── HAIR (back layer) ───────────────────────── */}
-        <Path
-          d="M 24,32 Q 20,70 22,90 Q 28,95 30,88 Q 26,68 28,36 Z"
-          fill={`url(#${uid}h)`}
-        />
+        {/* ── HAIR (back layer, behind ears) ──────────── */}
+        {gender === 'girl'
+          ? <GirlHairBack style={style} hairGrad={hairGrad} />
+          : <BoyHairBack  style={style} hairGrad={hairGrad} />}
 
         {/* ── EARS ────────────────────────────────────── */}
-        <Circle cx={22} cy={44} r={7} fill={`url(#${uid}s)`} />
-        <Circle cx={78} cy={44} r={7} fill={`url(#${uid}s)`} />
+        <Circle cx={22} cy={44} r={7} fill={skinGrad} />
+        <Circle cx={78} cy={44} r={7} fill={skinGrad} />
         <Circle cx={22} cy={44} r={4} fill={darken(skinTone, 0.08)} />
         <Circle cx={78} cy={44} r={4} fill={darken(skinTone, 0.08)} />
 
-        {/* ── HAIR (front) ────────────────────────────── */}
-        <Path
-          d="M 22,36 Q 26,10 50,12 Q 74,10 78,36 Q 74,18 50,16 Q 26,18 22,36 Z"
-          fill={`url(#${uid}h)`}
-        />
-        <Path
-          d="M 22,36 Q 18,42 20,50 Q 24,46 26,40 Z"
-          fill={`url(#${uid}h)`}
-        />
-        <Path
-          d="M 74,30 Q 86,28 88,42 Q 86,54 78,52 Q 80,44 82,38 Q 80,30 74,30 Z"
-          fill={`url(#${uid}h)`}
-        />
-        <Path
-          d="M 36,14 Q 50,12 60,15"
-          stroke={lighten(hairColor, 0.3)}
-          strokeWidth={3}
-          strokeLinecap="round"
-          fill="none"
-        />
+        {/* ── HAIR (front, over ears) ─────────────────── */}
+        {gender === 'girl'
+          ? <GirlHairFront style={style} hairGrad={hairGrad} hairColor={hairColor} />
+          : <BoyHairFront  style={style} hairGrad={hairGrad} hairColor={hairColor} />}
 
         {/* ── EYES ────────────────────────────────────── */}
         <Ellipse cx={40} cy={40} rx={7} ry={6} fill="white" />
@@ -184,6 +179,146 @@ export function LilaCharacter({
         {equippedHat === 'hat-rainbow-tiara' && <NatureQueenTiara />}
       </G>
     </Svg>
+  );
+}
+
+// ── Girl hairstyles ─────────────────────────────────────────────────
+
+function GirlHairBack({ style, hairGrad }: { style: number; hairGrad: string }) {
+  if (style === 1) {
+    // Long straight — long tail behind on left side
+    return (
+      <Path
+        d="M 24,32 Q 20,70 22,90 Q 28,95 30,88 Q 26,68 28,36 Z"
+        fill={hairGrad}
+      />
+    );
+  }
+  if (style === 2) {
+    // Pigtails — short nubs on each side leading to the puffs
+    return (
+      <G>
+        <Path d="M 22,40 Q 20,50 22,58 Q 26,62 28,56 Q 26,50 24,44 Z" fill={hairGrad} />
+        <Path d="M 78,40 Q 80,50 78,58 Q 74,62 72,56 Q 74,50 76,44 Z" fill={hairGrad} />
+      </G>
+    );
+  }
+  // style === 3: Wavy bob — shorter back layer
+  return (
+    <Path
+      d="M 24,32 Q 20,55 22,68 Q 28,72 30,65 Q 26,52 28,36 Z"
+      fill={hairGrad}
+    />
+  );
+}
+
+function GirlHairFront({ style, hairGrad, hairColor }: { style: number; hairGrad: string; hairColor: string }) {
+  if (style === 1) {
+    // Long straight — classic flowing hair
+    return (
+      <G>
+        <Path d="M 22,36 Q 26,10 50,12 Q 74,10 78,36 Q 74,18 50,16 Q 26,18 22,36 Z" fill={hairGrad} />
+        <Path d="M 22,36 Q 18,42 20,50 Q 24,46 26,40 Z" fill={hairGrad} />
+        <Path d="M 74,30 Q 86,28 88,42 Q 86,54 78,52 Q 80,44 82,38 Q 80,30 74,30 Z" fill={hairGrad} />
+        <Path d="M 36,14 Q 50,12 60,15" stroke={lighten(hairColor, 0.3)} strokeWidth={3} strokeLinecap="round" fill="none" />
+      </G>
+    );
+  }
+  if (style === 2) {
+    // Pigtails — top cap + two round puffs with bands
+    return (
+      <G>
+        {/* Top cap */}
+        <Path d="M 22,36 Q 26,10 50,12 Q 74,10 78,36 Q 74,18 50,16 Q 26,18 22,36 Z" fill={hairGrad} />
+        {/* Left puff */}
+        <Circle cx={16} cy={62} r={10} fill={hairGrad} />
+        <Ellipse cx={13} cy={58} rx={4} ry={2.5} fill={lighten(hairColor, 0.3)} />
+        {/* Hair band left */}
+        <Rect x={19} y={56} width={9} height={5} rx={2.5} fill={darken(hairColor, 0.35)} />
+        {/* Right puff */}
+        <Circle cx={84} cy={62} r={10} fill={hairGrad} />
+        <Ellipse cx={81} cy={58} rx={4} ry={2.5} fill={lighten(hairColor, 0.3)} />
+        {/* Hair band right */}
+        <Rect x={72} y={56} width={9} height={5} rx={2.5} fill={darken(hairColor, 0.35)} />
+        <Path d="M 36,14 Q 50,12 60,15" stroke={lighten(hairColor, 0.3)} strokeWidth={3} strokeLinecap="round" fill="none" />
+      </G>
+    );
+  }
+  // style === 3: Wavy bob — rounded to jaw with wavy hem
+  return (
+    <G>
+      <Path d="M 22,36 Q 26,10 50,12 Q 74,10 78,36 Q 74,18 50,16 Q 26,18 22,36 Z" fill={hairGrad} />
+      {/* Left wavy side */}
+      <Path d="M 22,36 Q 17,44 18,54 Q 20,64 24,68 Q 28,64 26,56 Q 24,46 26,40 Z" fill={hairGrad} />
+      {/* Right wavy side */}
+      <Path d="M 76,32 Q 83,28 84,40 Q 84,52 80,60 Q 76,64 74,58 Q 78,50 78,42 Q 80,34 76,32 Z" fill={hairGrad} />
+      {/* Wavy bottom fringe */}
+      <Path
+        d="M 24,66 Q 30,74 37,68 Q 44,76 50,70 Q 56,76 63,68 Q 70,74 76,66"
+        stroke={hairGrad}
+        strokeWidth={7}
+        fill="none"
+        strokeLinecap="round"
+      />
+      <Path d="M 36,14 Q 50,12 60,15" stroke={lighten(hairColor, 0.3)} strokeWidth={3} strokeLinecap="round" fill="none" />
+    </G>
+  );
+}
+
+// ── Boy hairstyles ──────────────────────────────────────────────────
+
+function BoyHairBack({ style, hairGrad }: { style: number; hairGrad: string }) {
+  if (style === 3) {
+    // Wavy sweep — slight back piece on left
+    return (
+      <Path
+        d="M 24,34 Q 22,44 24,54 Q 28,58 30,52 Q 28,44 28,36 Z"
+        fill={hairGrad}
+      />
+    );
+  }
+  return null; // Short & Tidy and Spiky have no back layer
+}
+
+function BoyHairFront({ style, hairGrad, hairColor }: { style: number; hairGrad: string; hairColor: string }) {
+  if (style === 1) {
+    // Short & Tidy — clean close-cut cap
+    return (
+      <G>
+        <Path d="M 24,36 Q 26,12 50,14 Q 74,12 76,36 Q 70,24 50,22 Q 30,24 24,36 Z" fill={hairGrad} />
+        <Path d="M 24,36 Q 22,40 22,44 Q 25,44 26,40 Z" fill={hairGrad} />
+        {/* Side part highlight */}
+        <Path d="M 38,15 Q 44,13 50,14" stroke={lighten(hairColor, 0.3)} strokeWidth={2} strokeLinecap="round" fill="none" />
+      </G>
+    );
+  }
+  if (style === 2) {
+    // Spiky — base cap + 4 pointy spikes
+    return (
+      <G>
+        <Path d="M 24,36 Q 26,12 50,14 Q 74,12 76,36 Q 70,24 50,22 Q 30,24 24,36 Z" fill={hairGrad} />
+        <Path d="M 24,36 Q 22,40 22,44 Q 25,44 26,40 Z" fill={hairGrad} />
+        {/* Spikes */}
+        <Path d="M 30,20 L 34,4 L 38,20 Z" fill={hairGrad} />
+        <Path d="M 40,15 L 45,1 L 50,15 Z" fill={hairGrad} />
+        <Path d="M 50,15 L 55,1 L 60,15 Z" fill={hairGrad} />
+        <Path d="M 62,20 L 66,4 L 70,20 Z" fill={hairGrad} />
+        {/* Base filler between spikes */}
+        <Rect x={28} y={14} width={44} height={8} fill={hairGrad} />
+      </G>
+    );
+  }
+  // style === 3: Wavy sweep — side-parted waves
+  return (
+    <G>
+      {/* Base cap */}
+      <Path d="M 24,36 Q 28,12 50,14 Q 70,12 76,30 Q 72,20 56,18 Q 36,18 24,36 Z" fill={hairGrad} />
+      <Path d="M 24,36 Q 22,40 22,44 Q 25,44 26,40 Z" fill={hairGrad} />
+      {/* Right side wave curl */}
+      <Path d="M 74,30 Q 82,26 84,38 Q 82,48 76,50 Q 78,42 80,36 Q 80,28 74,30 Z" fill={hairGrad} />
+      {/* Sweep highlight */}
+      <Path d="M 26,20 Q 40,12 58,14" stroke={lighten(hairColor, 0.3)} strokeWidth={2.5} strokeLinecap="round" fill="none" />
+    </G>
   );
 }
 

@@ -41,6 +41,8 @@ const MAX_FURNITURE = 6;
 export interface GameState {
   // ── Player identity ─────────────────────────────────────────
   playerName: string;
+  gender: 'girl' | 'boy';
+  hairstyle: number;  // 1, 2, or 3
   hairColor: string;
   skinTone: string;
   outfitColor: string;
@@ -83,7 +85,7 @@ export interface GameState {
   lastPlayDate: string | null;
 
   // ── Actions ──────────────────────────────────────────────────
-  createCharacter: (name: string, hairColor: string, skinTone: string, outfitColor: string) => void;
+  createCharacter: (name: string, gender: 'girl' | 'boy', hairstyle: number, hairColor: string, skinTone: string, outfitColor: string) => void;
   gainXP: (amount: number) => void;
   clearPendingLevelUp: () => void;
   discoverAnimal: (animalId: string) => void;
@@ -108,6 +110,8 @@ const DEFAULT_OWNED_ITEMS = ['hat-explorer', 'outfit-garden', 'furn-bed', 'item-
 
 const INITIAL_STATE = {
   playerName: '',
+  gender: 'girl' as 'girl' | 'boy',
+  hairstyle: 1,
   hairColor: '#F4D03F',
   skinTone: '#F1C27D',
   outfitColor: '#FF6B9D',
@@ -152,8 +156,8 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       ...INITIAL_STATE,
 
-      createCharacter: (name, hairColor, skinTone, outfitColor) =>
-        set({ playerName: name, hairColor, skinTone, outfitColor, isCharacterCreated: true }),
+      createCharacter: (name, gender, hairstyle, hairColor, skinTone, outfitColor) =>
+        set({ playerName: name, gender, hairstyle, hairColor, skinTone, outfitColor, isCharacterCreated: true }),
 
       gainXP: (amount) => {
         const state = get();
@@ -411,6 +415,8 @@ export const useGameStore = create<GameState>()(
         }
 
         // Defaults for new fields
+        if (!state.gender) state.gender = 'girl';
+        if (!state.hairstyle) state.hairstyle = 1;
         if (!state.equippedFurniture) state.equippedFurniture = [];
         if (!state.equippedFurniture.includes('furn-bed') && state.equippedFurniture.length < 6) { state.equippedFurniture = ['furn-bed', ...state.equippedFurniture]; }
         if (!state.locationVisitCounts) state.locationVisitCounts = {};

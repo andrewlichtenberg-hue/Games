@@ -110,7 +110,7 @@ function ItemTile({
 export function WardrobeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const {
-    hairColor, skinTone, outfitColor,
+    gender, hairstyle, hairColor, skinTone, outfitColor,
     equippedHat, equippedOutfit, equippedAccessories,
     ownedItems, ownedPowerups, activePowerups, equippedFurniture,
     equipItem, unequipItem, toggleActivePowerup, toggleFurniture,
@@ -205,6 +205,8 @@ export function WardrobeScreen({ navigation }: Props) {
       <View style={styles.preview}>
         <LinearGradient colors={['#E8EAF6', '#FFF9C4']} style={styles.previewGradient}>
           <LilaCharacter
+            gender={gender}
+            hairstyle={hairstyle}
             hairColor={hairColor}
             skinTone={skinTone}
             outfitColor={previewOutfit}

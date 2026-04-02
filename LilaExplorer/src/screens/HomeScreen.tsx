@@ -62,6 +62,8 @@ export function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const {
     playerName,
+    gender,
+    hairstyle,
     hairColor,
     skinTone,
     outfitColor,
@@ -104,6 +106,8 @@ export function HomeScreen({ navigation }: Props) {
               </View>
               {/* Mini character */}
               <LilaCharacter
+                gender={gender}
+                hairstyle={hairstyle}
                 hairColor={hairColor}
                 skinTone={skinTone}
                 outfitColor={activeOutfitColor}
@@ -153,6 +157,8 @@ export function HomeScreen({ navigation }: Props) {
                 {/* Lila standing in room */}
                 <View style={styles.lilaInRoom}>
                   <LilaCharacter
+                    gender={gender}
+                    hairstyle={hairstyle}
                     hairColor={hairColor}
                     skinTone={skinTone}
                     outfitColor={activeOutfitColor}

@@ -86,7 +86,7 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const locationAnimals = location ? getAnimalsForLocation(locationId) : [];
 
   const {
-    hairColor, skinTone, outfitColor, equippedHat, equippedOutfit,
+    gender, hairstyle, hairColor, skinTone, outfitColor, equippedHat, equippedOutfit,
     level, xp, discoveredAnimals, animalFriendship, companionAnimals,
     activePowerups, ownedItems, locationVisitCounts,
     gainXP, discoverAnimal, increaseFriendship, visitLocation,
@@ -525,6 +525,8 @@ export function ExplorationScreen({ route, navigation }: Props) {
             ]}
           >
             <LilaCharacter
+              gender={gender}
+              hairstyle={hairstyle}
               hairColor={hairColor}
               skinTone={skinTone}
               outfitColor={activeOutfitColor}

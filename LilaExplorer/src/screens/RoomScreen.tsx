@@ -120,7 +120,7 @@ type Props = { navigation: StackNavigationProp<RootStackParamList, 'Room'> };
 export function RoomScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const {
-    playerName, hairColor, skinTone, outfitColor,
+    playerName, gender, hairstyle, hairColor, skinTone, outfitColor,
     equippedHat, equippedOutfit, equippedFurniture, companionAnimals,
     earnSticker, gainXP,
   } = useGameStore();
@@ -238,6 +238,8 @@ export function RoomScreen({ navigation }: Props) {
                 }}
               >
                 <LilaCharacter
+                  gender={gender}
+                  hairstyle={hairstyle}
                   hairColor={hairColor}
                   skinTone={skinTone}
                   outfitColor={activeOutfitColor}
@@ -269,6 +271,8 @@ export function RoomScreen({ navigation }: Props) {
           {!isSleeping && (
             <View style={styles.lilaPos}>
               <LilaCharacter
+                gender={gender}
+                hairstyle={hairstyle}
                 hairColor={hairColor}
                 skinTone={skinTone}
                 outfitColor={activeOutfitColor}

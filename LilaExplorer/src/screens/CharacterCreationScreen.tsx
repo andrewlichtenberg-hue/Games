@@ -23,8 +23,13 @@ import type { RootStackParamList } from '../../App';
 const { width, height } = Dimensions.get('window');
 const IS_IPAD = width >= 768;
 
-// Steps: name → skin → hair → outfit → confirm
-const TOTAL_STEPS = 4;
+// Steps: name → gender → hairstyle → skin → hair → outfit
+const TOTAL_STEPS = 6;
+
+const HAIRSTYLE_LABELS: Record<'girl' | 'boy', string[]> = {
+  girl: ['Long Straight', 'Pigtails', 'Wavy Bob'],
+  boy:  ['Short & Tidy', 'Spiky',    'Wavy Sweep'],
+};
 
 type Props = { navigation: StackNavigationProp<RootStackParamList, 'CharacterCreation'> };
 
@@ -78,6 +83,114 @@ function Swatch({
   );
 }
 
+// ── Gender picker card ────────────────────────────────────────────────────────
+
+function GenderCard({
+  gender,
+  selected,
+  hairColor,
+  skinTone,
+  outfitColor,
+  onPress,
+}: {
+  gender: 'girl' | 'boy';
+  selected: boolean;
+  hairColor: string;
+  skinTone: string;
+  outfitColor: string;
+  onPress: () => void;
+}) {
+  const scaleAnim = useRef(new Animated.Value(selected ? 1.05 : 1)).current;
+
+  React.useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: selected ? 1.05 : 1,
+      useNativeDriver: true,
+      speed: 18,
+      bounciness: 6,
+    }).start();
+  }, [selected]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        onPress={() => { Haptics.impact(); onPress(); }}
+        style={[styles.genderCard, selected && styles.genderCardSelected]}
+        activeOpacity={0.85}
+      >
+        <LilaCharacter
+          gender={gender}
+          hairstyle={1}
+          hairColor={hairColor}
+          skinTone={skinTone}
+          outfitColor={outfitColor}
+          size={IS_IPAD ? 120 : 96}
+        />
+        <Text style={[styles.genderLabel, selected && styles.genderLabelSelected]}>
+          {gender === 'girl' ? 'Girl' : 'Boy'}
+        </Text>
+        {selected && <Text style={styles.genderCheck}>✓</Text>}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// ── Hairstyle picker card ─────────────────────────────────────────────────────
+
+function HairstyleCard({
+  gender,
+  style,
+  label,
+  selected,
+  hairColor,
+  skinTone,
+  outfitColor,
+  onPress,
+}: {
+  gender: 'girl' | 'boy';
+  style: number;
+  label: string;
+  selected: boolean;
+  hairColor: string;
+  skinTone: string;
+  outfitColor: string;
+  onPress: () => void;
+}) {
+  const scaleAnim = useRef(new Animated.Value(selected ? 1.05 : 1)).current;
+
+  React.useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: selected ? 1.05 : 1,
+      useNativeDriver: true,
+      speed: 18,
+      bounciness: 6,
+    }).start();
+  }, [selected]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        onPress={() => { Haptics.impact(); onPress(); }}
+        style={[styles.hairstyleCard, selected && styles.hairstyleCardSelected]}
+        activeOpacity={0.85}
+      >
+        <LilaCharacter
+          gender={gender}
+          hairstyle={style}
+          hairColor={hairColor}
+          skinTone={skinTone}
+          outfitColor={outfitColor}
+          size={IS_IPAD ? 100 : 80}
+        />
+        <Text style={[styles.hairstyleLabel, selected && styles.hairstyleLabelSelected]} numberOfLines={2}>
+          {label}
+        </Text>
+        {selected && <Text style={styles.genderCheck}>✓</Text>}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 // ── Step progress dots ────────────────────────────────────────────────────────
 
 function StepDots({ step }: { step: number }) {
@@ -105,6 +218,8 @@ export function CharacterCreationScreen({ navigation }: Props) {
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
+  const [gender, setGender] = useState<'girl' | 'boy'>('girl');
+  const [hairstyle, setHairstyle] = useState(1);
   const [skinTone, setSkinTone] = useState(SKIN_TONES[1]);
   const [hairColor, setHairColor] = useState(HAIR_COLORS[0]);
   const [outfitColor, setOutfitColor] = useState(OUTFIT_COLORS[0]);
@@ -121,8 +236,8 @@ export function CharacterCreationScreen({ navigation }: Props) {
   };
 
   const handleConfirm = () => {
-    const finalName = name.trim() || 'Lila';
-    createCharacter(finalName, hairColor, skinTone, outfitColor);
+    const finalName = name.trim() || (gender === 'girl' ? 'Lila' : 'Finn');
+    createCharacter(finalName, gender, hairstyle, hairColor, skinTone, outfitColor);
     Haptics.notification();
     navigation.replace('Home');
   };
@@ -152,7 +267,59 @@ export function CharacterCreationScreen({ navigation }: Props) {
             />
           </KeyboardAvoidingView>
         );
+
       case 1:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepQuestion}>Are you a girl or a boy? 🌈</Text>
+            <View style={styles.genderRow}>
+              <GenderCard
+                gender="girl"
+                selected={gender === 'girl'}
+                hairColor={hairColor}
+                skinTone={skinTone}
+                outfitColor={outfitColor}
+                onPress={() => setGender('girl')}
+              />
+              <GenderCard
+                gender="boy"
+                selected={gender === 'boy'}
+                hairColor={hairColor}
+                skinTone={skinTone}
+                outfitColor={gender === 'boy' ? outfitColor : '#3498DB'}
+                onPress={() => {
+                  setGender('boy');
+                  // Nudge outfit to blue if it was still the default pink
+                  if (outfitColor === OUTFIT_COLORS[0]) setOutfitColor('#3498DB');
+                }}
+              />
+            </View>
+          </View>
+        );
+
+      case 2:
+        return (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepQuestion}>Pick your hairstyle 💇</Text>
+            <View style={styles.hairstyleRow}>
+              {HAIRSTYLE_LABELS[gender].map((label, i) => (
+                <HairstyleCard
+                  key={i}
+                  gender={gender}
+                  style={i + 1}
+                  label={label}
+                  selected={hairstyle === i + 1}
+                  hairColor={hairColor}
+                  skinTone={skinTone}
+                  outfitColor={outfitColor}
+                  onPress={() => setHairstyle(i + 1)}
+                />
+              ))}
+            </View>
+          </View>
+        );
+
+      case 3:
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepQuestion}>Pick your skin tone 👋</Text>
@@ -163,7 +330,8 @@ export function CharacterCreationScreen({ navigation }: Props) {
             </View>
           </View>
         );
-      case 2:
+
+      case 4:
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepQuestion}>Pick your hair color ✨</Text>
@@ -174,10 +342,13 @@ export function CharacterCreationScreen({ navigation }: Props) {
             </View>
           </View>
         );
-      case 3:
+
+      case 5:
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepQuestion}>Pick your outfit color 👗</Text>
+            <Text style={styles.stepQuestion}>
+              {gender === 'girl' ? 'Pick your outfit color 👗' : 'Pick your outfit color 👕'}
+            </Text>
             <View style={styles.swatchGrid}>
               {OUTFIT_COLORS.map((c) => (
                 <Swatch key={c} color={c} selected={outfitColor === c} onPress={() => setOutfitColor(c)} />
@@ -185,6 +356,7 @@ export function CharacterCreationScreen({ navigation }: Props) {
             </View>
           </View>
         );
+
       default:
         return null;
     }
@@ -205,6 +377,8 @@ export function CharacterCreationScreen({ navigation }: Props) {
         <LinearGradient colors={['#B3E5FC', '#E1BEE7']} style={styles.previewCard}>
           <Animated.View style={{ transform: [{ translateX: slideAnim }] }}>
             <LilaCharacter
+              gender={gender}
+              hairstyle={hairstyle}
               hairColor={hairColor}
               skinTone={skinTone}
               outfitColor={outfitColor}
@@ -366,6 +540,84 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: C.UI_PRIMARY,
     textAlign: 'center',
+  },
+
+  // Gender picker
+  genderRow: {
+    flexDirection: 'row',
+    gap: IS_IPAD ? 24 : 18,
+    justifyContent: 'center',
+  },
+  genderCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    minWidth: IS_IPAD ? 140 : 120,
+  },
+  genderCardSelected: {
+    borderColor: C.UI_PRIMARY,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+  },
+  genderLabel: {
+    fontSize: IS_IPAD ? 20 : 17,
+    fontWeight: '800',
+    color: C.TEXT_MID,
+    marginTop: 8,
+  },
+  genderLabelSelected: {
+    color: C.UI_PRIMARY,
+  },
+  genderCheck: {
+    fontSize: 18,
+    color: C.UI_PRIMARY,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+
+  // Hairstyle picker
+  hairstyleRow: {
+    flexDirection: 'row',
+    gap: IS_IPAD ? 16 : 10,
+    justifyContent: 'center',
+  },
+  hairstyleCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: IS_IPAD ? 14 : 10,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    minWidth: IS_IPAD ? 110 : 90,
+    maxWidth: IS_IPAD ? 130 : 105,
+  },
+  hairstyleCardSelected: {
+    borderColor: C.UI_SECONDARY,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+  },
+  hairstyleLabel: {
+    fontSize: IS_IPAD ? 13 : 11,
+    fontWeight: '700',
+    color: C.TEXT_MID,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  hairstyleLabelSelected: {
+    color: C.UI_SECONDARY,
   },
 
   // Nav buttons
