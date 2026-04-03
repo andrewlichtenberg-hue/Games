@@ -39,6 +39,29 @@ const SCENE_H = Math.min(280, height * 0.36);
 const LILA_SIZE = 100;
 const GROUND_Y = SCENE_H * 0.62;
 
+// ── Weather ───────────────────────────────────────────────────
+type WeatherType = 'sunny' | 'cloudy' | 'rainy';
+const WEATHER_OPTIONS: WeatherType[] = ['sunny', 'sunny', 'cloudy', 'cloudy', 'rainy'];
+const WEATHER_TINT: Record<WeatherType, string | null> = {
+  sunny:  null,
+  cloudy: 'rgba(160,175,210,0.18)',
+  rainy:  'rgba(70,90,155,0.26)',
+};
+const WEATHER_CHIP: Record<WeatherType, string> = {
+  sunny:  '☀️ sunny',
+  cloudy: '⛅ cloudy',
+  rainy:  '🌧️ rainy',
+};
+
+// ── Mystery animal (deterministic per calendar day + location) ─
+function getDailyMysteryId(locationId: string, spawned: { animal: { id: string } }[]): string | null {
+  if (!spawned.length) return null;
+  const d = new Date();
+  const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  const locSeed = locationId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return spawned[(seed + locSeed) % spawned.length].animal.id;
+}
+
 type Props = {
   route: RouteProp<RootStackParamList, 'Exploration'>;
   navigation: StackNavigationProp<RootStackParamList, 'Exploration'>;
@@ -106,6 +129,15 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const hasGoldenJournal = hasPowerup('powerup-journal-upgrade');
   const hasLuckyClover   = hasPowerup('powerup-lucky-clover');
 
+  // Mystery animal for today
+  const [spawnedForMystery] = useState(() =>
+    spawnAnimals(locationAnimals, width, hasBinoculars, (locationVisitCounts[locationId] ?? 0) + 1)
+  );
+  const mysteryAnimalId = getDailyMysteryId(locationId, spawnedForMystery);
+
+  // Rain boots bonus: 25% normally, 40% on rainy days
+  const rainBootsBonus = weather === 'rainy' ? 0.40 : 0.25;
+
   // +1 for the current visit (visitLocation will fire on focus)
   const visitCount = (locationVisitCounts[locationId] ?? 0) + 1;
 
@@ -113,6 +145,21 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const hasUndiscoveredHidden = locationAnimals.some(
     (a) => a.hidden && !discoveredAnimals.includes(a.id) && visitCount < (a.minVisits ?? 3)
   );
+
+  // ── Weather (picked once per screen mount) ────────────────────
+  const [weather] = useState<WeatherType>(
+    () => WEATHER_OPTIONS[Math.floor(Math.random() * WEATHER_OPTIONS.length)]
+  );
+
+  // ── Mystery animal (today's star animal) ──────────────────────
+  // Derived after spawnedAnimals is initialised so we can share the ref.
+  const mysteryToastAnim = useRef(new Animated.Value(0)).current;
+  const [mysteryToast, setMysteryToast] = useState(false);
+
+  // ── Footprints ────────────────────────────────────────────────
+  interface Footprint { id: number; x: number; opacity: Animated.Value }
+  const [footprints, setFootprints] = useState<Footprint[]>([]);
+  const nextFpId = useRef(0);
 
   // ── Lila movement ─────────────────────────────────────────────
   const lilaX = useRef(new Animated.Value(width * 0.15)).current;
@@ -260,13 +307,23 @@ export function ExplorationScreen({ route, navigation }: Props) {
 
   const gainXPWithBoots = (base: number) => {
     if (hasRainBoots) {
-      const bonus = Math.ceil(base * 0.25);
+      const bonus = Math.ceil(base * rainBootsBonus);
       gainXP(base + bonus);
       showRainToast(bonus);
       return base + bonus;
     }
     gainXP(base);
     return base;
+  };
+
+  const showMysteryToast = () => {
+    setMysteryToast(true);
+    mysteryToastAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(mysteryToastAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.delay(2200),
+      Animated.timing(mysteryToastAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
+    ]).start(() => setMysteryToast(false));
   };
 
   const tryIncreaseFriendship = (animal: Animal, extraBoost = false) => {
@@ -286,7 +343,16 @@ export function ExplorationScreen({ route, navigation }: Props) {
   const handleScenePress = (evt: any) => {
     if (selectedAnimal || activePuzzle) return;
     const tapX = evt.nativeEvent.locationX;
-    setLilaFacing(tapX > lilaCurrentX ? 'right' : 'left');
+    const facingRight = tapX > lilaCurrentX;
+    setLilaFacing(facingRight ? 'right' : 'left');
+
+    // Leave a fading footprint at the current position before moving
+    const fpOpacity = new Animated.Value(0.65);
+    const fpId = nextFpId.current++;
+    setFootprints(prev => [...prev.slice(-4), { id: fpId, x: lilaCurrentX + LILA_SIZE * 0.25, opacity: fpOpacity }]);
+    Animated.timing(fpOpacity, { toValue: 0, duration: 1400, delay: 300, useNativeDriver: true })
+      .start(() => setFootprints(prev => prev.filter(f => f.id !== fpId)));
+
     setLilaCurrentX(tapX - LILA_SIZE / 2);
     Haptics.impact();
     audioManager.playSfx('walk');
@@ -321,7 +387,10 @@ export function ExplorationScreen({ route, navigation }: Props) {
     const { animal } = selectedAnimal;
     const isNew = !discoveredAnimals.includes(animal.id);
 
-    const earned = gainXPWithBoots(animal.xpReward);
+    const isMystery = animal.id === mysteryAnimalId;
+    const baseXP = isMystery ? animal.xpReward * 2 : animal.xpReward;
+    const earned = gainXPWithBoots(baseXP);
+    if (isMystery) setTimeout(() => showMysteryToast(), 300);
     discoverAnimal(animal.id);
     tryIncreaseFriendship(animal);
 
@@ -402,8 +471,14 @@ export function ExplorationScreen({ route, navigation }: Props) {
       </View>
 
       {/* Active power-up chips */}
-      {(hasBinoculars || hasRainBoots || calcAvailable || (hasLantern && hintAvailable) || hasWhistle || hasGoldenJournal || cloverAvailable) && (
+      {(hasBinoculars || hasRainBoots || calcAvailable || (hasLantern && hintAvailable) || hasWhistle || hasGoldenJournal || cloverAvailable || true) && (
         <View style={styles.powerupChips}>
+          {/* Weather chip — always visible */}
+          <View style={[styles.chip, {
+            backgroundColor: weather === 'rainy' ? '#BBDEFB' : weather === 'cloudy' ? '#ECEFF1' : '#FFF9C4',
+          }]}>
+            <Text style={styles.chipText}>{WEATHER_CHIP[weather]}{hasRainBoots && weather === 'rainy' ? ' ⚡+40%' : ''}</Text>
+          </View>
           {hasBinoculars && (
             <View style={[styles.chip, { backgroundColor: '#E3F2FD' }]}>
               <Text style={styles.chipText}>🔭 +1 animal</Text>
@@ -453,6 +528,35 @@ export function ExplorationScreen({ route, navigation }: Props) {
             accentColor={location.accentColor}
           />
 
+          {/* Weather tint overlay */}
+          {WEATHER_TINT[weather] && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute', top: 0, left: 0, right: 0,
+                height: GROUND_Y,
+                backgroundColor: WEATHER_TINT[weather]!,
+              }}
+            />
+          )}
+
+          {/* Footprints */}
+          {footprints.map(fp => (
+            <Animated.Text
+              key={fp.id}
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: fp.x,
+                bottom: SCENE_H - GROUND_Y - 2,
+                fontSize: 13,
+                opacity: fp.opacity,
+              }}
+            >
+              👣
+            </Animated.Text>
+          ))}
+
           {/* Animals */}
           {spawnedAnimals.map((spawned) => {
             const friendship = animalFriendship[spawned.animal.id] ?? 0;
@@ -497,6 +601,9 @@ export function ExplorationScreen({ route, navigation }: Props) {
                   )}
                   {spawned.animal.rarity === 'legendary' && !isDiscovered && !spawned.isBonus && !spawned.isHidden && (
                     <Text style={styles.rareBadge}>✨</Text>
+                  )}
+                  {spawned.animal.id === mysteryAnimalId && !spawned.found && (
+                    <Text style={styles.mysteryBadge}>⭐</Text>
                   )}
                 </TouchableOpacity>
 
@@ -607,6 +714,21 @@ export function ExplorationScreen({ route, navigation }: Props) {
           ]}
         >
           <Text style={styles.secretToastText}>🌟 You found a secret animal!</Text>
+        </Animated.View>
+      )}
+
+      {/* Mystery animal toast */}
+      {mysteryToast && (
+        <Animated.View
+          style={[
+            styles.mysteryToast,
+            {
+              opacity: mysteryToastAnim,
+              transform: [{ translateY: mysteryToastAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+            },
+          ]}
+        >
+          <Text style={styles.mysteryToastText}>⭐ Mystery Animal! 2× XP!</Text>
         </Animated.View>
       )}
 
@@ -799,6 +921,12 @@ const styles = StyleSheet.create({
     right: -10,
     fontSize: 18,
   },
+  mysteryBadge: {
+    position: 'absolute',
+    top: -12,
+    left: '50%',
+    fontSize: 18,
+  },
   lilaWrapper: {
     position: 'absolute',
   },
@@ -887,6 +1015,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     color: '#7E3F00',
+  },
+  mysteryToast: {
+    position: 'absolute',
+    bottom: 220,
+    alignSelf: 'center',
+    backgroundColor: '#FFF8E1',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderWidth: 2.5,
+    borderColor: '#FFD700',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  mysteryToastText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#E65100',
   },
   rainToast: {
     position: 'absolute',
