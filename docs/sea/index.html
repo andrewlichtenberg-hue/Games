@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Lila &amp; the Song of the Sea</title>
+<style>
+  :root{
+    --cream:#FFF8EC; --peach:#FFD9A0; --pink:#FF8FB1; --deeppink:#E56A93;
+    --ink:#5B4636; --aqua:#7FD8E8; --panelShadow:0 12px 40px rgba(60,40,20,.35);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#08222e;
+    font-family:ui-rounded,'Hiragino Maru Gothic ProN','Arial Rounded MT Bold','Trebuchet MS','Comic Sans MS',sans-serif;
+    touch-action:none; overscroll-behavior:none;}
+  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;}
+  #ui{position:fixed;inset:0;pointer-events:none;}
+  #ui *{pointer-events:auto;}
+
+  /* ── HUD ─────────────────────────── */
+  #hud{position:absolute;top:calc(8px + env(safe-area-inset-top));left:10px;right:10px;
+    display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;}
+  .pill{background:rgba(255,248,236,.92);border:2px solid var(--peach);border-radius:999px;
+    padding:5px 14px;font-size:17px;font-weight:800;color:var(--ink);
+    box-shadow:0 3px 10px rgba(60,40,20,.25);display:inline-flex;align-items:center;gap:6px;}
+  #hudLeft{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+  #hudRight{display:flex;gap:8px;}
+  .iconBtn{width:46px;height:46px;border-radius:50%;border:2px solid var(--peach);
+    background:rgba(255,248,236,.92);font-size:22px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 3px 10px rgba(60,40,20,.25);cursor:pointer;pointer-events:auto;}
+  .iconBtn:active{transform:scale(.92);}
+  #questPill{max-width:min(52vw,430px);font-size:14px;line-height:1.25;border-radius:18px;white-space:normal;}
+  #airWrap{position:absolute;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top));
+    width:min(46vw,300px);display:none;pointer-events:none;}
+  #airBox{height:22px;border-radius:999px;border:2px solid rgba(255,255,255,.85);
+    background:rgba(6,40,60,.55);overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.35);}
+  #airFill{height:100%;width:100%;border-radius:999px;
+    background:linear-gradient(90deg,#9BE8FF,#4FC3F7);transition:width .2s linear;}
+  #airLbl{text-align:center;color:#fff;font-weight:800;font-size:12px;text-shadow:0 2px 4px rgba(0,0,0,.5);margin-top:2px;}
+
+  /* ── Dialog ──────────────────────── */
+  #dlg{position:absolute;left:50%;transform:translateX(-50%);
+    bottom:calc(14px + env(safe-area-inset-bottom));width:min(94vw,720px);display:none;}
+  #dlgBox{background:rgba(255,248,236,.97);border:3px solid var(--peach);border-radius:24px;
+    padding:14px 18px 12px 90px;min-height:96px;position:relative;box-shadow:var(--panelShadow);}
+  #dlgPortrait{position:absolute;left:-6px;top:-26px;width:84px;height:84px;border-radius:50%;
+    border:3px solid var(--peach);background:radial-gradient(circle at 35% 30%,#fff,#FFE9C9);
+    box-shadow:0 6px 16px rgba(60,40,20,.3);}
+  #dlgName{font-weight:900;color:var(--deeppink);font-size:16px;margin-bottom:3px;}
+  #dlgText{font-size:18px;line-height:1.4;color:var(--ink);min-height:50px;font-weight:600;}
+  #dlgNext{position:absolute;right:16px;bottom:8px;font-size:20px;color:var(--deeppink);
+    animation:bob 1s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+  #dlgChoices{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .chBtn{background:linear-gradient(180deg,#FFB3C9,#FF8FB1);border:2px solid #E56A93;color:#fff;
+    font-weight:800;font-size:16px;border-radius:999px;padding:8px 18px;cursor:pointer;
+    box-shadow:0 3px 0 #C94E77;font-family:inherit;}
+  .chBtn:active{transform:translateY(2px);box-shadow:0 1px 0 #C94E77;}
+  .chBtn.alt{background:linear-gradient(180deg,#A8E6F0,#7FD8E8);border-color:#4FA8BC;box-shadow:0 3px 0 #3E8FA3;}
+
+  /* ── Toast / chapter card ───────── */
+  #toast{position:absolute;top:calc(70px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-20px);
+    background:rgba(91,70,54,.92);color:#FFF4DC;font-weight:800;font-size:16px;border-radius:999px;
+    padding:10px 22px;opacity:0;transition:all .35s ease;pointer-events:none;max-width:88vw;text-align:center;
+    box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #chapterCard{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;background:rgba(10,25,40,.78);z-index:30;pointer-events:none;}
+  #chapterSmall{color:#9BE8FF;font-weight:800;font-size:20px;letter-spacing:4px;text-transform:uppercase;opacity:0;}
+  #chapterBig{color:#fff;font-weight:900;font-size:clamp(30px,6vw,54px);text-align:center;padding:0 20px;
+    text-shadow:0 4px 24px rgba(127,216,232,.6);opacity:0;margin-top:10px;}
+  #chapterCard.show #chapterSmall{animation:fadeUp 1s ease .2s forwards;}
+  #chapterCard.show #chapterBig{animation:fadeUp 1.2s ease .6s forwards;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ── Letterbox / skip ───────────── */
+  .lbar{position:absolute;left:0;right:0;height:0;background:#000;transition:height .8s ease;z-index:25;pointer-events:none;}
+  #lbTop{top:0;} #lbBot{bottom:0;}
+  body.cine #lbTop,body.cine #lbBot{height:11vh;}
+  body.cine #hud,body.cine #toast,body.cine #airWrap{display:none!important;}
+  #skipBtn{position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top));z-index:26;display:none;
+    background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.5);color:#fff;font-weight:800;
+    border-radius:999px;padding:7px 16px;font-size:14px;cursor:pointer;font-family:inherit;}
+  #subT{position:absolute;left:50%;transform:translateX(-50%);bottom:13vh;width:min(92vw,760px);z-index:26;
+    text-align:center;color:#fff;font-size:clamp(17px,2.6vw,23px);font-weight:700;display:none;
+    text-shadow:0 2px 8px rgba(0,0,0,.85), 0 0 24px rgba(0,0,0,.5);pointer-events:none;line-height:1.45;}
+
+  /* ── Panels ─────────────────────── */
+  #panelWrap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(20,30,45,.55);z-index:20;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+  #panel{background:var(--cream);border:3px solid var(--peach);border-radius:26px;box-shadow:var(--panelShadow);
+    width:min(94vw,700px);max-height:min(86vh,640px);display:flex;flex-direction:column;overflow:hidden;}
+  #panelHead{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;background:linear-gradient(180deg,#FFE9C9,#FFDCA8);border-bottom:2px solid var(--peach);}
+  #panelTitle{font-size:22px;font-weight:900;color:var(--ink);}
+  #panelClose{width:38px;height:38px;border-radius:50%;border:2px solid #E56A93;background:#FF8FB1;color:#fff;
+    font-size:19px;font-weight:900;cursor:pointer;font-family:inherit;line-height:1;}
+  #panelBody{padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;color:var(--ink);}
+  #panelTabs{display:flex;gap:6px;padding:10px 14px 0;background:#FFF2DD;}
+  .ptab{border:2px solid var(--peach);border-bottom:none;background:#FFE9C9;border-radius:14px 14px 0 0;
+    padding:8px 16px;font-weight:800;font-size:15px;color:#8a6d52;cursor:pointer;font-family:inherit;}
+  .ptab.on{background:var(--cream);color:var(--deeppink);}
+  .card{background:#fff;border:2px solid #F4DDB8;border-radius:16px;padding:12px 14px;margin-bottom:10px;}
+  .card h4{margin:0 0 4px;font-size:17px;color:var(--deeppink);}
+  .card p{margin:0;font-size:14px;line-height:1.4;font-weight:600;color:#7a6248;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;}
+  .gcell{background:#fff;border:2px solid #F4DDB8;border-radius:14px;padding:8px 4px;text-align:center;}
+  .gcell .gi{height:52px;display:flex;align-items:center;justify-content:center;}
+  .gcell .gn{font-size:11px;font-weight:800;color:#7a6248;line-height:1.2;}
+  .gcell.locked{opacity:.45;filter:grayscale(1);}
+  .buyRow{display:flex;align-items:center;gap:12px;background:#fff;border:2px solid #F4DDB8;
+    border-radius:16px;padding:10px 12px;margin-bottom:10px;}
+  .buyRow .bi{width:54px;height:54px;flex:none;display:flex;align-items:center;justify-content:center;}
+  .buyRow .bt{flex:1;} .buyRow .bt b{font-size:16px;color:var(--ink);}
+  .buyRow .bt small{display:block;font-size:12.5px;font-weight:700;color:#8a6d52;line-height:1.3;}
+  .buyBtn{background:linear-gradient(180deg,#FFD57E,#FFB84D);border:2px solid #E09B2D;color:#6b4a12;
+    font-weight:900;font-size:15px;border-radius:999px;padding:8px 14px;cursor:pointer;font-family:inherit;
+    box-shadow:0 3px 0 #C98620;white-space:nowrap;}
+  .buyBtn:disabled{opacity:.45;box-shadow:none;}
+  .buyBtn.owned{background:#D7EED7;border-color:#8CC98C;color:#3E7A3E;box-shadow:none;}
+
+  /* ── Touch controls ─────────────── */
+  #touch{position:absolute;inset:0;pointer-events:none;display:none;}
+  .tbtn{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;
+    background:rgba(255,248,236,.35);border:2.5px solid rgba(255,255,255,.65);color:#fff;
+    font-size:30px;display:flex;align-items:center;justify-content:center;pointer-events:auto;
+    text-shadow:0 2px 4px rgba(0,0,0,.4);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+  .tbtn:active,.tbtn.held{background:rgba(255,182,193,.55);}
+  #btnL{left:calc(16px + env(safe-area-inset-left));}
+  #btnR{left:calc(104px + env(safe-area-inset-left));}
+  #btnA{right:calc(18px + env(safe-area-inset-right));width:86px;height:86px;font-size:36px;
+    background:rgba(255,143,177,.5);border-color:rgba(255,255,255,.8);}
+
+  /* ── Title screen ───────────────── */
+  #titleUI{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+    justify-content:flex-end;padding-bottom:max(7vh,40px);z-index:15;pointer-events:none;}
+  .titleBtn{pointer-events:auto;margin:7px 0;width:min(74vw,320px);padding:15px 0;border-radius:999px;
+    font-size:21px;font-weight:900;font-family:inherit;cursor:pointer;color:#fff;
+    background:linear-gradient(180deg,#FF9FBC,#F26D99);border:3px solid #fff;
+    box-shadow:0 6px 0 #C94E77,0 10px 28px rgba(0,0,0,.35);}
+  .titleBtn:active{transform:translateY(4px);box-shadow:0 2px 0 #C94E77;}
+  .titleBtn.alt{background:linear-gradient(180deg,#8FE0EF,#4FB6CC);box-shadow:0 6px 0 #35859B,0 10px 28px rgba(0,0,0,.35);}
+  .titleBtn.alt:active{box-shadow:0 2px 0 #35859B;}
+  #rotateHint{position:fixed;inset:0;background:#08222e;z-index:99;display:none;align-items:center;
+    justify-content:center;flex-direction:column;color:#fff;font-size:20px;font-weight:800;text-align:center;padding:30px;}
+  #rotateHint .ph{font-size:64px;animation:rot 1.6s ease-in-out infinite;}
+  @keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+  @media (orientation:portrait) and (max-width:600px){ #rotateHint{display:flex;} }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud" style="display:none">
+    <div id="hudLeft">
+      <span class="pill" id="shellPill">🐚 0</span>
+      <span class="pill" id="questPill">…</span>
+    </div>
+    <div id="hudRight">
+      <button class="iconBtn" id="btnJournal" title="Journal">📖</button>
+      <button class="iconBtn" id="btnSettings" title="Settings">⚙️</button>
+    </div>
+  </div>
+  <div id="airWrap"><div id="airBox"><div id="airFill"></div></div><div id="airLbl">AIR</div></div>
+  <div id="toast"></div>
+  <div id="dlg">
+    <div id="dlgBox">
+      <canvas id="dlgPortrait" width="168" height="168"></canvas>
+      <div id="dlgName"></div>
+      <div id="dlgText"></div>
+      <div id="dlgNext">▼</div>
+      <div id="dlgChoices"></div>
+    </div>
+  </div>
+  <div id="chapterCard"><div id="chapterSmall"></div><div id="chapterBig"></div></div>
+  <div class="lbar" id="lbTop"></div><div class="lbar" id="lbBot"></div>
+  <div id="subT"></div>
+  <button id="skipBtn">Skip ⏭</button>
+  <div id="panelWrap">
+    <div id="panel">
+      <div id="panelHead"><div id="panelTitle">Journal</div><button id="panelClose">✕</button></div>
+      <div id="panelTabs"></div>
+      <div id="panelBody"></div>
+    </div>
+  </div>
+  <div id="touch">
+    <div class="tbtn" id="btnL">◀</div>
+    <div class="tbtn" id="btnR">▶</div>
+    <div class="tbtn" id="btnA">✦</div>
+  </div>
+  <div id="titleUI">
+    <button class="titleBtn" id="btnContinue" style="display:none">Continue ⭐</button>
+    <button class="titleBtn alt" id="btnNew">New Adventure 🌊</button>
+  </div>
+</div>
+<div id="rotateHint"><div class="ph">📱</div><div>Turn your device sideways<br>to play!</div></div>
+<script src="game.js"></script>
+</body>
+</html>
