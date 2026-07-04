@@ -40,6 +40,9 @@ jobs:
       - name: Fix script tag for ES module compatibility
         run: sed -i 's/ defer><\/script>/ type="module"><\/script>/' LilaExplorer/dist/index.html
 
+      - name: Add Lila & the Song of the Sea (docs/sea) to the site
+        run: cp -r docs/sea LilaExplorer/dist/sea
+
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
