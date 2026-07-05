@@ -43,6 +43,9 @@ jobs:
       - name: Add Lila & the Song of the Sea (docs/sea) to the site
         run: cp -r docs/sea LilaExplorer/dist/sea
 
+      - name: Add Lila & the Tides of Shimmer Isle (docs/tides) to the site
+        run: cp -r docs/tides LilaExplorer/dist/tides
+
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
