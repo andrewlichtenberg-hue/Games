@@ -193,7 +193,16 @@ function ptrPos(e) {
   const t = e.touches ? e.touches[0] : e;
   return t ? { x: t.clientX, y: t.clientY } : null;
 }
+let lastTouchAt = -1e9;
+// On tablets a single tap fires BOTH touch events and, ~300ms later, a
+// synthesized "ghost" mouse event. Without this, every tap registers twice —
+// which double-pressed rhythm-game notes. Ignore mouse events shortly after touch.
+function isGhost(e) {
+  if (e && e.type && e.type.indexOf('touch') === 0) { lastTouchAt = performance.now(); return false; }
+  return performance.now() - lastTouchAt < 700;
+}
 function onDown(e) {
+  if (isGhost(e)) return;
   if (e.target && e.target.closest && e.target.closest('#ui') &&
       !e.target.closest('#touch') && e.target.id !== 'ui') return;
   const p = ptrPos(e); if (!p) return;
@@ -201,11 +210,13 @@ function onDown(e) {
   AudioSys.unlock();
 }
 function onMove(e) {
+  if (isGhost(e)) return;
   const p = ptrPos(e); if (!p) return;
   if (ptr.down && dist(p.x, p.y, ptr.x, ptr.y) > 14) ptr.moved = true;
   ptr.x = p.x; ptr.y = p.y;
 }
-function onUp() {
+function onUp(e) {
+  if (isGhost(e)) return;
   if (ptr.down && !ptr.moved && G.t - ptr.downT < 0.4) ptr.tapped = true;
   ptr.down = false;
 }
@@ -950,6 +961,16 @@ const POSTGAME_HINT = 'Free play forever! Fill the journal, find every charm, wi
    All characters draw with feet (or tail) at (0,0), facing right.
    ============================================================ */
 const INK = '#4A3B33';
+// Draw centred text that shrinks to fit within maxW so sign labels never overflow.
+function fitText(c, text, x, y, maxW, size, color, weight) {
+  weight = weight || '900';
+  let fs = size;
+  c.font = `${weight} ${fs}px ui-rounded, sans-serif`;
+  while (fs > 8 && c.measureText(text).width > maxW) { fs -= 1; c.font = `${weight} ${fs}px ui-rounded, sans-serif`; }
+  c.textAlign = 'center';
+  if (color) c.fillStyle = color;
+  c.fillText(text, x, y);
+}
 function oval(c, x, y, rx, ry, fill, stroke) {
   c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, TAU);
   if (fill) { c.fillStyle = fill; c.fill(); }
@@ -2069,9 +2090,8 @@ function genericShop(key, base, roof, sign, accent) {
     }
     rr(c, -70, -56, 56, 42, 8); c.fillStyle = '#BFE9FF'; c.fill(); c.strokeStyle = INK; c.stroke();
     rr(c, 18, -60, 42, 60, 15); c.fillStyle = '#B3574A'; c.fill(); c.stroke();
-    rr(c, -62, -178, 124, 40, 18); c.fillStyle = '#FFF6E8'; c.fill(); c.stroke();
-    c.font = '900 19px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#5B4636';
-    c.fillText(sign, 0, -150);
+    rr(c, -84, -180, 168, 42, 20); c.fillStyle = '#FFF6E8'; c.fill(); c.stroke();
+    fitText(c, sign, 0, -151, 152, 19, '#5B4636');
   });
 }
 function cafeSpr() {
@@ -2090,9 +2110,8 @@ function cafeSpr() {
     }
     rr(c, -78, -60, 62, 44, 8); c.fillStyle = '#BFE9FF'; c.fill(); c.stroke();
     rr(c, 22, -64, 44, 64, 16); c.fillStyle = '#B3574A'; c.fill(); c.stroke();
-    rr(c, -55, -196, 110, 44, 20); c.fillStyle = '#FFF6E8'; c.fill(); c.stroke();
-    c.font = '900 21px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#E56A93';
-    c.fillText('☕ CAFÉ ♪', 0, -166);
+    rr(c, -74, -198, 148, 46, 22); c.fillStyle = '#FFF6E8'; c.fill(); c.stroke();
+    fitText(c, '☕ CAFÉ ♪', 0, -167, 134, 22, '#E56A93');
   });
 }
 function cottageSpr() {
@@ -2117,9 +2136,8 @@ function cottageSpr() {
     c.bezierCurveTo(25, -48, 33, -52, 31, -45); c.bezierCurveTo(29, -52, 37, -48, 31, -40);
     c.fill();
     // name plaque
-    rr(c, -70, -160, 140, 34, 16); c.fillStyle = '#FFF6E8'; c.fill(); c.strokeStyle = INK; c.lineWidth = 2.6; c.stroke();
-    c.font = '900 17px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#3E8E88';
-    c.fillText("🏠 LILA'S COTTAGE", 0, -137);
+    rr(c, -84, -162, 168, 36, 16); c.fillStyle = '#FFF6E8'; c.fill(); c.strokeStyle = INK; c.lineWidth = 2.6; c.stroke();
+    fitText(c, "🏠 LILA'S COTTAGE", 0, -138, 154, 18, '#3E8E88');
     // flowers
     for (let i = 0; i < 6; i++) {
       const fx = -80 + i * 32;
@@ -2142,9 +2160,8 @@ function garageSpr() {
     c.strokeStyle = '#2A2A32'; c.lineWidth = 7; c.beginPath(); c.arc(60, -66, 22, 0, TAU); c.stroke();
     c.strokeStyle = '#FFB84D'; c.lineWidth = 3;
     for (let i = 0; i < 5; i++) { const a = i * TAU / 5; c.beginPath(); c.moveTo(60, -66); c.lineTo(60 + Math.cos(a) * 18, -66 + Math.sin(a) * 18); c.stroke(); }
-    rr(c, -74, -186, 148, 40, 18); c.fillStyle = '#FFF6E8'; c.fill(); c.strokeStyle = INK; c.lineWidth = 3; c.stroke();
-    c.font = '900 18px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#2B5BB5';
-    c.fillText('🚲 GARAGE & DIVE', 0, -158);
+    rr(c, -90, -188, 180, 42, 20); c.fillStyle = '#FFF6E8'; c.fill(); c.strokeStyle = INK; c.lineWidth = 3; c.stroke();
+    fitText(c, '🚲 GARAGE & DIVE', 0, -159, 166, 19, '#2B5BB5');
     // surfboard
     c.save(); c.translate(-128, -16); c.rotate(-.16);
     oval(c, 0, -48, 15, 55, '#FFC24C', INK);
@@ -2384,9 +2401,8 @@ function surfShackSpr() {
       line(c, 0, -82, 0, -4, 2, 'rgba(255,255,255,.6)');
       c.restore();
     }
-    rr(c, -55, -142, 110, 34, 16); c.fillStyle = '#FFF6E8'; c.fill(); c.strokeStyle = INK; c.lineWidth = 2.6; c.stroke();
-    c.font = '900 16px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#2B8BA5';
-    c.fillText('🏄 SURF SHACK', 0, -119);
+    rr(c, -74, -144, 148, 36, 18); c.fillStyle = '#FFF6E8'; c.fill(); c.strokeStyle = INK; c.lineWidth = 2.6; c.stroke();
+    fitText(c, '🏄 SURF SHACK', 0, -120, 134, 17, '#2B8BA5');
   });
 }
 function mermaidRockSpr() {
@@ -5115,6 +5131,9 @@ function rhythmGen() {
 function rhythmPress(i) {
   const R = G.rhythm;
   if (!R || R.phase !== 'input') return;
+  const now = performance.now();
+  if (R.lastI === i && now - (R.lastPressT || 0) < 140) return; // swallow accidental double-taps of same note
+  R.lastI = i; R.lastPressT = now;
   R.lit = i; R.litT = .25;
   AudioSys.sfx('noteI', i);
   if (i === R.seq[R.inputIdx]) {
