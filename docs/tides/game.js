@@ -70,6 +70,8 @@ function defaultSave() {
     ownedFurn: [],
     pet: { adopted: false, treats: 0, hearts: 0 },
     mapPieces: [], dug: [],    // treasure maps
+    garden: { plots: [null, null, null] }, // cottage garden (grows while she sleeps)
+    letters: { got: [], read: [] },        // mail from island friends
     frags: [false, false, false], // tide-pearl fragments
     isle: 'home', px: 900, tod: 0.36,
     visited: ['home'],
@@ -103,6 +105,8 @@ function loadSlot(n) {
     S.hearts = Object.assign(defaultSave().hearts, d.hearts || {});
     S.pet = Object.assign(defaultSave().pet, d.pet || {});
     S.outfit = Object.assign(defaultSave().outfit, d.outfit || {});
+    S.garden = Object.assign(defaultSave().garden, d.garden || {});
+    S.letters = Object.assign(defaultSave().letters, d.letters || {});
     return true;
   }
   S = defaultSave();
@@ -869,6 +873,45 @@ const CHARMS = [
   { id: 'c9', isle: 'lagoon', x: 1100 }, { id: 'c10', isle: 'lagoon', x: 4300 },
   { id: 'c11', isle: 'mist', x: 2200 }, { id: 'c12', isle: 'volcano', x: 3000 },
 ];
+
+/* ── cottage garden & mailbox ────────────────────────────── */
+const MAILBOX_X = 940;                       // by the cottage door
+const GARDEN_X = 1240;                        // little bed just past the cottage
+const gardenPlotX = i => GARDEN_X + i * 48;   // 3 plots
+const GARDEN_CROPS = {
+  mango:     { n: 'Mango',     em: '🥭', yield: [2, 3] },
+  banana:    { n: 'Banana',    em: '🍌', yield: [2, 3] },
+  blueberry: { n: 'Blueberry', em: '🫐', yield: [3, 4] },
+  coconut:   { n: 'Coconut',   em: '🥥', yield: [1, 2] },
+};
+const GARDEN_RIPE = 3; // seed(0) → sprout(1) → leafy(2) → ripe(3); grows +1 each sleep
+
+/* letters that arrive in the mailbox — one per sleep, as friends unlock */
+const LETTERS = [
+  { id: 'l_kitty', from: 'kitty', title: 'Welcome home! 💝', cond: () => S.flags.gotCottage, gift: { shells: 10 },
+    text: "Dear Lila,\nYour little cottage glowed dark and empty for so long. Now its window shines at night like a friendly star, right back at my lighthouse. Sweet dreams, neighbour!\n— Hello Kitty" },
+  { id: 'l_melody', from: 'melody', title: 'From the Beach Café', cond: () => S.mq >= 5, gift: { shells: 8 },
+    text: "Lila!\nThe café smells of sunrise tarts again, and it's all thanks to you. Your table by the window is always waiting. Pop by for a warm bun any time. ♪\n— My Melody" },
+  { id: 'l_purin', from: 'purin', title: 'A note about naps', cond: () => S.mq >= 6, gift: { item: 'blueberry', n: 2 },
+    text: "Hihi Lila,\nA perfect nap needs three things: one sunbeam, one soft pillow, and zero hurry. I checked, and your cottage bed has all three. I may have tested it. 🍮\n— Pompompurin" },
+  { id: 'l_pochacco', from: 'pochacco', title: 'Keep those tires spinning', cond: () => S.vehicles.bike, gift: { shells: 12 },
+    text: "Yo Lila!\nSaw you catch AIR off the beach ramp — so cool! I tuned up your bike just for you. Ring that bell nice and loud out there. 🚲\n— Pochacco" },
+  { id: 'l_pusheen', from: 'pusheen', title: 'a letter (re: snacks)', cond: () => S.pet.adopted, gift: { item: 'treat', n: 2 },
+    text: "i left this on your pillow.\nit is warm because i was sitting on it. i love our cottage very much. the sun square at 3pm is elite. also: it is snack time. it is always snack time.\n— Pusheen 🍪" },
+  { id: 'l_turtles', from: 'leo', title: 'From the dojo brothers', cond: () => S.mq >= 17, gift: { shells: 15 },
+    text: "Lila!\nMikey ate two of the pizzas before we could even say thanks — so we're saying it now, extra big: THANK YOU. Come train with us whenever you like. Cowabunga! 🐢\n— Leo, Raph, Mikey & Donnie" },
+  { id: 'l_coral', from: 'coral', title: 'Boutique news 🐚', cond: () => S.mq >= 6, gift: { shells: 8 },
+    text: "Darling Lila,\nNew ribbons washed in on the tide! Twirl by the tidepools when you can — you'd look positively dreamy in the lavender.\n— Coral" },
+  { id: 'l_sammy', from: 'sammy', title: 'psst — treasure tip', cond: () => S.mq >= 8, gift: { shells: 10 },
+    text: "Hey Lila,\nBuried treasure loves quiet beaches. Bring your shovel and a sharp eye, follow the sparkles, and dig where two map halves agree. (Maybe bring a snack for me too?) 🐿️\n— Sammy" },
+  { id: 'l_marina', from: 'marina', title: 'The lagoon still sings', cond: () => S.mq >= 25, gift: { shells: 14 },
+    text: "Dear Lila,\nSome evenings the grotto still echoes your song, and the whole lagoon glows a little brighter for it. The mermaids ask about you. Swim back soon. 🧜‍♀️\n— Marina" },
+  { id: 'l_queen', from: 'queen', title: 'The sea remembers you', cond: () => S.mq >= 99, gift: { shells: 30 },
+    text: "Child of the shimmer shore,\nThe Moon Pearl shines because your heart is true. The whole ocean counts you as its friend now. Come home to the reef whenever you miss us. 👑\n— Queen Nerissa" },
+];
+function nextLetter() {
+  return LETTERS.find(L => !S.letters.got.includes(L.id) && L.cond());
+}
 
 /* ── NPCs ────────────────────────────────────────────────── */
 const NPCS = {
@@ -2800,6 +2843,16 @@ function findInteractLand() {
   if (S.isle === 'home') {
     if (near(POS.cafeDoor, 60)) cands.push({ x: POS.cafeDoor, icon: '🍳', label: 'Kitchen', act: () => openPanel('cafe') });
     if (near(POS.cottage, 70) && S.flags.gotCottage) cands.push({ x: POS.cottage, icon: '🏠', label: 'Go inside', act: enterHouse });
+    if (S.flags.gotCottage) {
+      if (near(MAILBOX_X, 44)) cands.push({ x: MAILBOX_X, icon: S.flags.mailPending ? '📬' : '📪', label: S.flags.mailPending ? 'Read your mail!' : 'Mailbox', act: openMail });
+      S.garden.plots.forEach((pl, i) => {
+        const gx = gardenPlotX(i);
+        if (!near(gx, 28)) return;
+        if (!pl) cands.push({ x: gx, icon: '🌱', label: 'Plant a seed', act: () => plantMenu(i) });
+        else if (pl.stage >= GARDEN_RIPE) cands.push({ x: gx, icon: '🧺', label: `Pick ${GARDEN_CROPS[pl.crop].n}`, act: () => harvestPlot(i) });
+        else cands.push({ x: gx, icon: '💧', label: 'Water the garden', act: () => waterPlot(i) });
+      });
+    }
     if (near(POS.garage, 70)) cands.push({ x: POS.garage, icon: '🛒', label: 'Garage shop', act: () => openShop('garage') });
     if (near(POS.furnShop, 70)) cands.push({ x: POS.furnShop, icon: '🛋️', label: 'Comfy Corner', act: () => openShop('furniture') });
     if (near(POS.toyShop, 70)) cands.push({ x: POS.toyShop, icon: '🧸', label: 'Treasure Stand', act: () => openShop('toyshop') });
@@ -3069,6 +3122,7 @@ function drawLand() {
     }
   }
   drawPropsLayer(1, camX);
+  if (S.isle === 'home' && S.flags.gotCottage) drawGardenAndMail(camX);
   // fruits on trees
   (TREE_SETS[S.isle] || []).forEach(tr => {
     const sx = tr.x - camX;
@@ -3210,6 +3264,92 @@ function drawPropsLayer(layer, camX) {
     if (sx + halfW < -50 || sx - halfW > VW + 50) return;
     blit(ctx, pr.s, sx, gyAt(pr.x) + 2, pr.scale);
   });
+}
+function drawGardenAndMail(camX) {
+  // ── mailbox by the door ──
+  const mx = MAILBOX_X - camX, mgy = gyAt(MAILBOX_X);
+  if (mx > -80 && mx < VW + 80) {
+    ctx.save(); ctx.translate(mx, mgy);
+    ctx.fillStyle = 'rgba(40,30,20,.14)'; ctx.beginPath(); ctx.ellipse(0, 2, 16, 4, 0, 0, TAU); ctx.fill();
+    line(ctx, 0, 0, 0, -52, 7, '#8C6A4B');
+    // box
+    rr(ctx, -18, -80, 36, 30, 7); ctx.fillStyle = '#E56A93'; ctx.fill();
+    ctx.strokeStyle = '#B94E71'; ctx.lineWidth = 2.4; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-18, -68); ctx.quadraticCurveTo(0, -86, 18, -68); ctx.closePath();
+    ctx.fillStyle = '#FF9FBE'; ctx.fill(); ctx.strokeStyle = '#B94E71'; ctx.stroke();
+    line(ctx, -18, -66, 18, -66, 2, '#B94E71');
+    // flag (up when mail is waiting)
+    const up = !!S.flags.mailPending;
+    ctx.save(); ctx.translate(18, -74);
+    ctx.rotate(up ? -0.15 + Math.sin(G.t * 3) * .05 : 0.9);
+    line(ctx, 0, 0, 0, -20, 2.4, '#8C6A4B');
+    ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(13, -16); ctx.lineTo(0, -12); ctx.closePath();
+    ctx.fillStyle = up ? '#FFD24C' : '#C9B89A'; ctx.fill();
+    ctx.restore();
+    ctx.restore();
+    if (S.flags.mailPending) {
+      glow(ctx, mx, mgy - 70, 34, rgba(255, 220, 130), .3 + .12 * Math.sin(G.t * 4));
+      ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+      ctx.globalAlpha = .6 + .4 * Math.sin(G.t * 3);
+      ctx.fillText('💌', mx + 22, mgy - 92 - Math.abs(Math.sin(G.t * 2)) * 4);
+      ctx.globalAlpha = 1;
+    }
+  }
+  // ── the garden bed ──
+  const bx0 = gardenPlotX(0) - 34, bx1 = gardenPlotX(2) + 34;
+  if (bx1 - camX < -40 || bx0 - camX > VW + 40) return;
+  // fence rails
+  ctx.strokeStyle = '#B98A5A'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (let fx = bx0; fx <= bx1; fx += 22) {
+    const fgy = gyAt(fx);
+    line(ctx, fx - camX, fgy - 2, fx - camX, fgy - 16, 3, '#C89A6A');
+  }
+  line(ctx, bx0 - camX, gyAt(bx0) - 12, bx1 - camX, gyAt(bx1) - 12, 3, '#C89A6A');
+  S.garden.plots.forEach((pl, i) => {
+    const gx = gardenPlotX(i), sx = gx - camX, gyy = gyAt(gx);
+    // soil mound
+    ctx.fillStyle = pl && pl.watered ? '#6B4A2E' : '#8A6038';
+    ctx.beginPath(); ctx.ellipse(sx, gyy - 1, 20, 8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(60,40,24,.35)';
+    ctx.beginPath(); ctx.ellipse(sx, gyy - 2, 13, 4.5, 0, 0, TAU); ctx.fill();
+    if (!pl) {
+      ctx.fillStyle = 'rgba(90,120,70,.7)'; ctx.textAlign = 'center'; ctx.font = '12px sans-serif';
+      ctx.fillText('·', sx, gyy - 4);
+      return;
+    }
+    const sway = Math.sin(G.t * 1.6 + i * 1.3) * 2;
+    const drawLeaf = (bx, by, len, ang) => {
+      ctx.strokeStyle = '#4FA85C'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(bx, by);
+      ctx.quadraticCurveTo(bx + Math.cos(ang) * len * .6, by + Math.sin(ang) * len * .6, bx + Math.cos(ang) * len, by + Math.sin(ang) * len);
+      ctx.stroke();
+    };
+    if (pl.stage === 0) {
+      line(ctx, sx + sway, gyy - 3, sx + sway, gyy - 12, 3, '#6FBE6C');
+      oval(ctx, sx + sway, gyy - 13, 3, 2.4, '#7FE08C', null);
+    } else if (pl.stage === 1) {
+      line(ctx, sx + sway, gyy - 3, sx + sway, gyy - 22, 3.4, '#5CAE5C');
+      drawLeaf(sx + sway, gyy - 20, 12, -0.5); drawLeaf(sx + sway, gyy - 16, 12, -2.6);
+    } else {
+      // leafy bush (stage 2 & 3)
+      line(ctx, sx + sway, gyy - 3, sx + sway, gyy - 30, 4, '#4FA05C');
+      for (let k = 0; k < 4; k++) {
+        const a = -Math.PI / 2 + (k - 1.5) * .7;
+        drawLeaf(sx + sway, gyy - 26 + (k % 2) * 6, 16, a);
+      }
+      oval(ctx, sx + sway, gyy - 34, 12, 10, '#5CBE6C', '#3E8E4C');
+      if (pl.stage >= GARDEN_RIPE) {
+        // ripe fruit + a little glow so it's obviously ready
+        glow(ctx, sx, gyy - 32, 26, rgba(255, 240, 200), .2 + .1 * Math.sin(G.t * 3));
+        const fc = FRUIT_COL[pl.crop];
+        for (let k = 0; k < 3; k++) {
+          const fx = sx + sway + [-7, 7, 0][k], fy = gyy - 30 + [0, -2, -10][k];
+          oval(ctx, fx, fy, 5.5, pl.crop === 'banana' ? 4 : 5.5, fc, INK);
+        }
+      }
+    }
+  });
+  ctx.lineCap = 'butt';
 }
 function drawDiveSpot(b, camX, sky) {
   const sx = b.x - camX;
@@ -4309,6 +4449,10 @@ function sleepScene(targetTod) {
     done: () => {
       AudioSys.play('house', 2);
       toast(targetTod < .5 ? '🌞 Good morning, sunshine!' : '🌙 The stars are out…');
+      const grew = growGarden();
+      const gotMail = deliverMail();
+      if (grew) setTimeout(() => toast('🌱 Your garden grew overnight! Go take a peek. 🥭'), 1700);
+      if (gotMail) setTimeout(() => toast('📬 You\'ve got mail! Check the box by your door. 💌'), grew ? 3300 : 1700);
       if (S.mq === 4 && !S.flags.dreamDone) {
         S.flags.dreamDone = true; markSave();
         setTimeout(() => dsay([
@@ -4555,7 +4699,7 @@ function drawFurniture(fid, sx, fy) {
    UI — dialog, toasts, panels, HUD, transitions
    ============================================================ */
 function refreshBusy() {
-  G.busy = !!(G.dialog || G.panel || G.cutscene || G.rhythm || G.cook || G.chapterT || G.fade);
+  G.busy = !!(G.dialog || G.panel || G.cutscene || G.rhythm || G.cook || G.chapterT || G.fade || G.photoOpen);
 }
 /* ── dialog ──────────────────────────────────────────────── */
 function dsay(seq, cb) {
@@ -4713,7 +4857,7 @@ function updateVehBtn() {
 /* ── panels ──────────────────────────────────────────────── */
 const PANEL_TABS = {
   journal: [['quests', '📜 Quests'], ['fish', '🐟 Sea Life'], ['friends', '💗 Friends'], ['coll', '⭐ Treasures']],
-  shop: [], cafe: [], sell: [], settings: [], decor: [], map: [],
+  shop: [], cafe: [], sell: [], settings: [], decor: [], map: [], mail: [],
 };
 function openPanel(name, tab) {
   AudioSys.sfx('tap');
@@ -4742,6 +4886,7 @@ function renderPanel() {
   const titles = {
     journal: "📖 Lila's Journal", cafe: '🍳 Beach Café Kitchen', sell: '🐟 Sell Fish',
     settings: '⚙️ Settings', decor: '🛋️ Decorate!', map: '🗺️ The Tide Chart',
+    mail: '💌 Your Mailbox',
     shop: G.shopId ? SHOPS[G.shopId].title : 'Shop',
   };
   $('panelTitle').textContent = titles[name];
@@ -4765,6 +4910,33 @@ function renderPanel() {
   if (name === 'settings') renderSettings(body);
   if (name === 'decor') renderDecor(body);
   if (name === 'map') renderMap(body);
+  if (name === 'mail') renderMail(body);
+}
+function renderMail(body) {
+  const got = S.letters.got;
+  if (!got.length) {
+    body.innerHTML = '<div class="card"><h4>No letters yet 💌</h4><p>Your island friends write when they\'re thinking of you. New mail turns up in the box after a good night\'s sleep!</p></div>';
+    return;
+  }
+  const fresh = G.freshMail || [];
+  let html = '';
+  // newest first
+  got.slice().reverse().forEach(id => {
+    const L = LETTERS.find(x => x.id === id);
+    if (!L) return;
+    const nm = L.from === 'leo' ? 'The Turtle Brothers' : (NPCS[L.from] ? NPCS[L.from].n : L.from);
+    const isNew = fresh.includes(id);
+    let gift = '';
+    if (L.gift && L.gift.shells) gift = `🎁 A gift of 🐚 ${L.gift.shells} shells`;
+    else if (L.gift && L.gift.item) gift = `🎁 A gift: ${(ITEMS[L.gift.item] || {}).em || ''} ${(ITEMS[L.gift.item] || {}).n || L.gift.item}${L.gift.n > 1 ? ' ×' + L.gift.n : ''}`;
+    html += `<div class="card"${isNew ? ' style="border-color:#FF9FBE;box-shadow:0 0 0 2px #FFDDE8 inset"' : ''}>
+      <h4>${isNew ? '✨ ' : ''}${L.title}</h4>
+      <p style="white-space:pre-line">${L.text}</p>
+      ${gift ? `<p style="margin-top:8px;color:#C97A2E;font-weight:800">${gift}</p>` : ''}
+      <p style="margin-top:6px;font-size:12px;opacity:.6">💌 from ${nm}</p></div>`;
+  });
+  body.innerHTML = html;
+  G.freshMail = null;
 }
 function buyRow(body, { em, n, d, canvasFish }, btnText, disabled, cb, owned) {
   const row = document.createElement('div');
@@ -5106,6 +5278,120 @@ function renderSettings(body) {
   sw.appendChild(swB);
   body.appendChild(sw);
 }
+
+/* ============================================================
+   PHOTO MODE — a camera that keeps polaroid snapshots
+   ============================================================ */
+let curPhoto = null; // full-res dataURL of the shot on screen
+function photoLocationName() {
+  if (G.mode === 'house') return 'Cozy Cottage';
+  if (G.mode === 'sail') return 'Out at Sea';
+  if (G.mode === 'dive') return 'Under the Waves';
+  if (S.isle === 'home') {
+    const z = HOME_ZONES.find(z => G.p.x >= z.x0 && G.p.x < z.x1);
+    return z ? z.name : 'Shimmer Isle';
+  }
+  return (ISLES[S.isle] || {}).name || 'Shimmer Isle';
+}
+function composePolaroid(src) {
+  const b = 26, capH = 108, pw = 720, ph = 456;
+  const cw = pw + b * 2, ch = b + ph + capH;
+  const o = document.createElement('canvas');
+  o.width = cw; o.height = ch;
+  const c = o.getContext('2d');
+  // paper
+  c.fillStyle = '#FFFDF6'; c.fillRect(0, 0, cw, ch);
+  c.fillStyle = 'rgba(0,0,0,.05)'; c.fillRect(0, ch - 3, cw, 3);
+  // photo, cover-cropped
+  const sr = src.width / src.height, dr = pw / ph;
+  let sw2, sh2, sx2, sy2;
+  if (sr > dr) { sh2 = src.height; sw2 = sh2 * dr; sx2 = (src.width - sw2) / 2; sy2 = 0; }
+  else { sw2 = src.width; sh2 = sw2 / dr; sx2 = 0; sy2 = (src.height - sh2) / 2; }
+  c.save();
+  c.beginPath(); c.rect(b, b, pw, ph); c.clip();
+  c.drawImage(src, sx2, sy2, sw2, sh2, b, b, pw, ph);
+  c.restore();
+  c.strokeStyle = 'rgba(80,60,40,.35)'; c.lineWidth = 2; c.strokeRect(b, b, pw, ph);
+  // caption
+  const cap = `${photoLocationName()} · ${(DRESSES[S.outfit.dress] || {}).n || 'Explorer'}`;
+  c.textAlign = 'center';
+  c.fillStyle = '#5B4636';
+  c.font = "700 34px ui-rounded, 'Comic Sans MS', sans-serif";
+  c.fillText(cap, cw / 2, b + ph + 52);
+  c.fillStyle = '#E56A93';
+  c.font = "700 22px ui-rounded, 'Comic Sans MS', sans-serif";
+  c.fillText('Lila & the Tides of Shimmer Isle 💗', cw / 2, b + ph + 86);
+  return o;
+}
+function photoKey() { return 'lilaTides_photos_p' + activeSlot; }
+function loadAlbum() { try { return JSON.parse(localStorage.getItem(photoKey()) || '[]'); } catch (e) { return []; } }
+function saveAlbum(a) {
+  for (let tries = 0; tries < 20; tries++) {
+    try { localStorage.setItem(photoKey(), JSON.stringify(a)); return true; }
+    catch (e) { if (a.length > 1) a.shift(); else return false; }
+  }
+  return false;
+}
+function takePhoto() {
+  if (G.busy || G.mode === 'title' || G.mode === 'boot') return;
+  const poly = composePolaroid(cvs);
+  curPhoto = poly.toDataURL('image/png');
+  // shutter!
+  AudioSys.sfx('tap'); AudioSys.sfx('shellS');
+  G.flash = 0.85;
+  // stash a small thumbnail in the album (kept out of the main save so it can't
+  // ever bump the game save past the storage limit)
+  const th = document.createElement('canvas');
+  const tw = 320, thh = Math.round(poly.height * tw / poly.width);
+  th.width = tw; th.height = thh;
+  th.getContext('2d').drawImage(poly, 0, 0, tw, thh);
+  const album = loadAlbum();
+  album.push({ img: th.toDataURL('image/jpeg', 0.72), t: Date.now() });
+  while (album.length > 16) album.shift();
+  saveAlbum(album);
+  showPhotoOverlay(curPhoto);
+}
+function showPhotoOverlay(dataURL) {
+  G.photoOpen = true; refreshBusy();
+  $('photoImg').src = dataURL;
+  $('photoAlbumGrid').style.display = 'none';
+  $('photoStage').style.display = 'flex';
+  $('photoWrap').style.display = 'flex';
+}
+function closePhoto() { G.photoOpen = false; refreshBusy(); $('photoWrap').style.display = 'none'; }
+function savePhotoToDevice() {
+  if (!curPhoto) return;
+  const a = document.createElement('a');
+  a.href = curPhoto;
+  a.download = 'lila-keepsake-' + Date.now() + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('💾 Keepsake saved to your device! 📷');
+}
+function openAlbum() {
+  const album = loadAlbum();
+  const grid = $('photoAlbumGrid');
+  grid.innerHTML = '';
+  if (!album.length) {
+    grid.innerHTML = '<p style="grid-column:1/-1;color:#7a6248;font-weight:700;text-align:center">No snapshots yet — tap 📷 to take one!</p>';
+  } else {
+    album.slice().reverse().forEach(ph => {
+      const im = document.createElement('img');
+      im.src = ph.img; im.className = 'albThumb';
+      im.onclick = () => { curPhoto = ph.img; showPhotoOverlay(ph.img); };
+      grid.appendChild(im);
+    });
+  }
+  $('photoStage').style.display = 'none';
+  grid.style.display = 'grid';
+  G.photoOpen = true; refreshBusy();
+  $('photoWrap').style.display = 'flex';
+}
+if ($('btnPhoto')) $('btnPhoto').onclick = () => { if (!G.busy && G.mode !== 'title' && G.mode !== 'boot') { AudioSys.sfx('tap'); takePhoto(); } };
+if ($('photoSave')) $('photoSave').onclick = e => { e.stopPropagation(); savePhotoToDevice(); };
+if ($('photoAlbum')) $('photoAlbum').onclick = e => { e.stopPropagation(); AudioSys.sfx('tap'); openAlbum(); };
+if ($('photoSnap')) $('photoSnap').onclick = e => { e.stopPropagation(); closePhoto(); setTimeout(takePhoto, 60); };
+if ($('photoClose')) $('photoClose').onclick = e => { e.stopPropagation(); AudioSys.sfx('tap'); closePhoto(); };
+if ($('photoWrap')) $('photoWrap').addEventListener('click', e => { if (e.target === $('photoWrap')) closePhoto(); });
 /* ============================================================
    MINIGAMES — Echo Song (rhythm) & Café cooking
    ============================================================ */
@@ -5583,6 +5869,81 @@ function questHint() {
   if (S.mq >= 99) return POSTGAME_HINT;
   const q = MQ[S.mq];
   return typeof q.h === 'function' ? q.h() : q.h;
+}
+
+/* ── cottage garden ──────────────────────────────────────── */
+function plantMenu(i) {
+  dchoice('lila', 'What should I plant in this little spot?', [
+    { label: '🥭 Mango', cb: () => plantSeed(i, 'mango') },
+    { label: '🍌 Banana', cb: () => plantSeed(i, 'banana') },
+    { label: '🫐 Blueberry', cb: () => plantSeed(i, 'blueberry') },
+    { label: '🥥 Coconut', alt: true, cb: () => plantSeed(i, 'coconut') },
+  ]);
+}
+function plantSeed(i, crop) {
+  S.garden.plots[i] = { crop, stage: 0, watered: false };
+  markSave(); saveGame();
+  AudioSys.sfx('write');
+  burst(gardenPlotX(i), gyAt(gardenPlotX(i)) - 8, '#6B4A2E', 8, { grav: 40, size: 3 });
+  toast(`${GARDEN_CROPS[crop].em} Planted! It grows a little every time you sleep. 😴`);
+}
+function waterPlot(i) {
+  const pl = S.garden.plots[i];
+  if (!pl) return;
+  pl.watered = true; markSave();
+  AudioSys.sfx('splash');
+  burst(gardenPlotX(i), gyAt(gardenPlotX(i)) - 22, 'rgba(150,210,255,.9)', 10, { grav: 120, speed: 40, size: 3 });
+  toast(pick(['💧 The little sprout looks so happy!', '💧 Splish-splash — grow, grow, grow!', '💧 A cool drink. It grows more while you sleep. 😴']));
+}
+function harvestPlot(i) {
+  const pl = S.garden.plots[i];
+  if (!pl || pl.stage < GARDEN_RIPE) return;
+  const C = GARDEN_CROPS[pl.crop];
+  const n = irnd(C.yield[0], C.yield[1]);
+  invAdd(pl.crop, n);
+  S.garden.plots[i] = null;
+  markSave(); saveGame();
+  AudioSys.sfx('pickup'); AudioSys.sfx('yay');
+  burst(gardenPlotX(i), gyAt(gardenPlotX(i)) - 30, FRUIT_COL[pl.crop], 14, { grav: -40, star: true });
+  toast(`🧺 Harvested ${n} ${C.n}${n > 1 ? 's' : ''}! Fresh from your garden. ${C.em}`);
+}
+function growGarden() {
+  let grew = false;
+  S.garden.plots.forEach(pl => {
+    if (pl && pl.stage < GARDEN_RIPE) { pl.stage++; pl.watered = false; grew = true; }
+  });
+  if (grew) markSave();
+  return grew;
+}
+
+/* ── mailbox ─────────────────────────────────────────────── */
+function deliverMail() {
+  const L = nextLetter();
+  if (!L) return false;
+  S.letters.got.push(L.id);
+  S.flags.mailPending = true;
+  markSave();
+  return true;
+}
+function openMail() {
+  // opening the box = reading the new letters (and collecting their little gifts)
+  const fresh = [];
+  S.letters.got.forEach(id => {
+    if (!S.letters.read.includes(id)) {
+      const L = LETTERS.find(x => x.id === id);
+      if (L) {
+        if (L.gift && L.gift.shells) addShells(L.gift.shells);
+        if (L.gift && L.gift.item) invAdd(L.gift.item, L.gift.n || 1);
+        fresh.push(id);
+      }
+      S.letters.read.push(id);
+    }
+  });
+  S.flags.mailPending = false;
+  markSave(); saveGame();
+  if (fresh.length) AudioSys.sfx('heartS');
+  G.freshMail = fresh;
+  openPanel('mail');
 }
 
 /* ── talk dispatcher ─────────────────────────────────────── */
@@ -6776,7 +7137,7 @@ function update(dt) {
   else if (G.mode === 'title') { G.tod = .88; }
   if (actionQueued) {
     actionQueued = false;
-    if (G.cutscene || G.cook || G.rhythm || G.train || G.chapterT || G.fade) { /* consumed elsewhere */ }
+    if (G.cutscene || G.cook || G.rhythm || G.train || G.chapterT || G.fade || G.photoOpen) { /* consumed elsewhere */ }
     else if (G.dialog) advanceDialog();
     else if (!G.panel && G.nearTarget) G.nearTarget.act();
     else if (!G.panel && G.vehicle === 'bike' && S.flags.bell) { AudioSys.sfx(S.flags.goldbell ? 'yay' : 'ding'); }

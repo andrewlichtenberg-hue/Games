@@ -122,6 +122,27 @@
   .buyBtn:disabled{opacity:.45;box-shadow:none;}
   .buyBtn.owned{background:#D7EED7;border-color:#8CC98C;color:#3E7A3E;box-shadow:none;}
 
+  /* ── Photo / keepsake ───────────── */
+  #photoWrap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(20,30,45,.62);z-index:22;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+  #photoInner{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:94vw;max-height:92vh;}
+  #photoStage{display:flex;align-items:center;justify-content:center;}
+  #photoImg{max-width:86vw;max-height:64vh;border-radius:8px;
+    box-shadow:0 14px 40px rgba(0,0,0,.5);transform:rotate(-1.4deg);background:#FFFDF6;}
+  #photoAlbumGrid{display:none;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;
+    max-width:min(92vw,720px);max-height:70vh;overflow-y:auto;padding:6px;
+    background:rgba(255,248,236,.14);border-radius:16px;}
+  .albThumb{width:100%;border-radius:6px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.35);
+    transition:transform .12s ease;background:#FFFDF6;}
+  .albThumb:active{transform:scale(.95);}
+  #photoBtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+  .pbtn{background:linear-gradient(180deg,#FFD57E,#FFB84D);border:2px solid #E09B2D;color:#6b4a12;
+    font-weight:900;font-size:16px;border-radius:999px;padding:10px 18px;cursor:pointer;font-family:inherit;
+    box-shadow:0 3px 0 #C98620;}
+  .pbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #C98620;}
+  .pbtn.alt{background:linear-gradient(180deg,#A8E6F0,#7FD8E8);border-color:#4FA8BC;box-shadow:0 3px 0 #3E8FA3;color:#12414d;}
+  .pbtn.alt:active{box-shadow:0 1px 0 #3E8FA3;}
+
   /* ── Touch controls ─────────────── */
   #touch{position:absolute;inset:0;pointer-events:none;display:none;}
   .tbtn{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));width:72px;height:72px;border-radius:50%;
@@ -165,6 +186,7 @@
     <div id="hudRight">
       <button class="iconBtn" id="btnVeh" title="Vehicle" style="display:none">🚲</button>
       <button class="iconBtn" id="btnMap" title="Map">🗺️</button>
+      <button class="iconBtn" id="btnPhoto" title="Take a photo">📷</button>
       <button class="iconBtn" id="btnJournal" title="Journal">📖</button>
       <button class="iconBtn" id="btnSettings" title="Settings">⚙️</button>
     </div>
@@ -189,6 +211,20 @@
       <div id="panelHead"><div id="panelTitle">Journal</div><button id="panelClose">✕</button></div>
       <div id="panelTabs"></div>
       <div id="panelBody"></div>
+    </div>
+  </div>
+  <div id="photoWrap">
+    <div id="photoInner">
+      <div id="photoStage">
+        <img id="photoImg" alt="Lila keepsake">
+      </div>
+      <div id="photoAlbumGrid"></div>
+      <div id="photoBtns">
+        <button class="pbtn" id="photoSnap">📷 Another</button>
+        <button class="pbtn" id="photoSave">💾 Save</button>
+        <button class="pbtn" id="photoAlbum">📁 Album</button>
+        <button class="pbtn alt" id="photoClose">✕ Close</button>
+      </div>
     </div>
   </div>
   <div id="touch">
